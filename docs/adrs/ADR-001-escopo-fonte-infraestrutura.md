@@ -51,6 +51,8 @@ Infraestrutura de execução será dividida em duas categorias:
 - **O que roda permanentemente (produção real do portfólio)**: 100% GitHub-nativo. Dados (bronze/silver/gold em Parquet) versionados diretamente no repositório Git — o volume real validado (~25 MB para 9 anos de SINAN-TB) está muito abaixo de qualquer limite que justificasse Git LFS ou GitHub Releases, então essas ferramentas foram descartadas por desnecessárias (não por indisponibilidade). Orquestração via GitHub Actions agendado; dashboard final publicado como site estático via GitHub Pages. Nenhum destes componentes tem custo, e nenhum exige cartão de crédito cadastrado.
 - **O que prova competência em cloud (Azure)**: arquitetura de referência (ADLS Gen2 + Synapse Serverless SQL + Microsoft Purview) escrita como Infrastructure as Code (Bicep) e versionada no repositório, mas não mantida no ar de forma contínua. A validação de que o IaC funciona acontece uma única vez — subir os recursos, executar o pipeline apontando para lá, capturar evidência (prints/vídeo curto), e derrubar os recursos (`az group delete`) imediatamente depois. Exposição de custo é única, breve, e sob controle direto — nunca um serviço esquecido rodando.
 
+**Nota de decisão (2026-08-02):** as colunas `AGRAVOUTDE`, `EXTRAPUL_O` e `OUTRAS_DES` (presentes só em 2015) serão descartadas na transformação bronze→silver. Motivo: não são necessárias para responder às perguntas de negócio do projeto (incidência/abandono de tratamento por município/UF e reconciliação SINAN×SIM) e não existem na maior parte da janela temporal (2016–2023), o que as torna incompatíveis com um schema silver estável ano a ano.
+
 ## Consequences
 
 ### Positive
