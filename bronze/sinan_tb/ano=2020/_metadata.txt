@@ -1,0 +1,5 @@
+source=PySUS sinan(disease='tube', year=2020)
+ingested_at=2026-08-03T00:29:53.447908+00:00
+rows=85962
+columns=97
+checksum_sha256_16=e4cffa22bd31b37a
