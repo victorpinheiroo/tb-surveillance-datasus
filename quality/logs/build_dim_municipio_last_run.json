@@ -1,0 +1,43 @@
+{
+  "pipeline_name": "build_dim_municipio_scd2",
+  "started_at": "2026-08-03T18:49:23.223216+00:00",
+  "completed_at": "2026-08-03T18:49:25.519705+00:00",
+  "steps": [
+    {
+      "step": "load_population_silver",
+      "rows_before": 0,
+      "rows_after": 55708,
+      "rows_changed": -55708,
+      "detail": {}
+    },
+    {
+      "step": "detect_coverage_gaps",
+      "rows_before": 55708,
+      "rows_after": 55708,
+      "rows_changed": 0,
+      "detail": {
+        "municipios_com_gap": 1,
+        "exemplo": [
+          {
+            "codigo_municipio": "5101837",
+            "anos_ausentes": [
+              2022,
+              2023
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "step": "build_scd2",
+      "rows_before": 55708,
+      "rows_after": 5571,
+      "rows_changed": 50137,
+      "detail": {
+        "municipios_unicos": 5571,
+        "versoes_totais": 5571,
+        "mudancas_de_atributo_reais_detectadas": 0
+      }
+    }
+  ]
+}
