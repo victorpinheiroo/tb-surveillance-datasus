@@ -1,0 +1,52 @@
+{
+  "pipeline_name": "bronze_to_silver_ibge_population",
+  "started_at": "2026-08-03T17:53:34.236725+00:00",
+  "completed_at": "2026-08-03T17:53:34.750597+00:00",
+  "steps": [
+    {
+      "step": "load_bronze_years",
+      "rows_before": 0,
+      "rows_after": 55718,
+      "rows_changed": -55718,
+      "detail": {}
+    },
+    {
+      "step": "filter_header_row",
+      "rows_before": 55718,
+      "rows_after": 55708,
+      "rows_changed": 10,
+      "detail": {
+        "removidas_por_ano": {
+          "2015": 1,
+          "2016": 1,
+          "2017": 1,
+          "2018": 1,
+          "2019": 1,
+          "2020": 1,
+          "2021": 1,
+          "2022": 1,
+          "2023": 1,
+          "2024": 1
+        }
+      }
+    },
+    {
+      "step": "standardize_columns",
+      "rows_before": 55708,
+      "rows_after": 55708,
+      "rows_changed": 0,
+      "detail": {
+        "populacao_nao_numerica": 8
+      }
+    },
+    {
+      "step": "validate_uniqueness",
+      "rows_before": 55708,
+      "rows_after": 55708,
+      "rows_changed": 0,
+      "detail": {
+        "linhas_duplicadas_ano_municipio": 0
+      }
+    }
+  ]
+}
