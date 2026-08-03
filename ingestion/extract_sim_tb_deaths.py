@@ -182,10 +182,16 @@ def main():
     if not args.years:
         raise SystemExit("--years é obrigatório fora do modo --validate-only")
 
-    build_coverage_report(args.states, args.years)
+    report = build_coverage_report(args.states, args.years)
 
     for year in args.years:
         for state in args.states:
+            if not report.loc[state, year]:
+                print(
+                    f"  pulando {state}/{year}: gap de cobertura já confirmado "
+                    f"no catálogo (ver relatório acima), não é erro"
+                )
+                continue
             extract_state_year(state, year)
 
 

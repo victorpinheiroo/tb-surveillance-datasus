@@ -44,7 +44,11 @@ Não há tentativa de rastrear o mesmo paciente ao longo de múltiplas notifica�
 
 - O projeto não pode responder perguntas que dependessem de identidade de paciente ao longo do tempo (ex.: taxa de reincidência real por indivíduo) — isso precisa ser declarado como fora de escopo na documentação pública, não deixado implícito.
 - A métrica de "percentual de colisão de quase-identificador" é um teto superior estimado, não uma medida exata de duplicidade real — precisa ser apresentada com essa ressalva, para não ser lida como uma taxa de duplicidade confirmada.
-- `NDUPLIC_N` em si não teve seus valores (`0`/`1`/`2`) decodificados contra o dicionário oficial do SINAN nesta ADR — isso precisa ser confirmado antes de implementar o filtro de remoção no silver (mesmo cuidado já aplicado a `SITUA_ENCE`).
+- `NDUPLIC_N = 0`/branco significa "não avaliado quanto a duplicidade", não "confirmado como não-duplicata" — filtrar só por `= 2` captura duplicatas já confirmadas pela fonte, mas não garante ausência de duplicidade não avaliada. Isso deve ficar explícito em qualquer relatório de qualidade que cite essa deduplicação.
+
+**Nota de validação — decodificação de `NDUPLIC_N` (2026-08-03):** confirmado via dicionário de dados do SINAN (campo de sistema comum a todos os agravos, nome interno `tp_duplicidade`): `0`/branco = "não identificado" (não avaliado), `1` = "não é duplicidade" (avaliado e válido), `2` = "duplicidade (não contar)". **Regra de filtro adotada: descartar apenas linhas com `NDUPLIC_N = 2`** — é a única categoria que representa duplicata confirmada pela própria fonte; `0` e `1` são mantidos.
+
+**Ressalva de proveniência**: essa decodificação vem de texto indexado (busca via Google) de dois PDFs oficiais do portal SINAN, corroborado por um artigo peer-reviewed (SciELO) citando o mesmo uso do campo — o servidor `portalsinan.saude.gov.br` não respondeu no momento da tentativa de leitura direta do PDF. Confiança razoável (duas fontes independentes convergentes + uso documentado na literatura), mas de proveniência mais fraca que a decodificação de `SITUA_ENCE` (essa sim confirmada por leitura direta de PDF oficial). Se o portal voltar a responder, vale confirmar por leitura direta antes de publicar o projeto.
 
 ## Alternatives Considered
 

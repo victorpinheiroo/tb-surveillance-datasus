@@ -1,3 +1,4 @@
 pysus>=2.0
 pandas
 pyarrow
+sidrapy
