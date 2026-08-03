@@ -1,0 +1,45 @@
+{
+  "pipeline_name": "bronze_to_silver_sim",
+  "started_at": "2026-08-03T22:33:13.824906+00:00",
+  "completed_at": "2026-08-03T22:33:16.797611+00:00",
+  "steps": [
+    {
+      "step": "load_bronze",
+      "rows_before": 0,
+      "rows_after": 40205,
+      "rows_changed": -40205,
+      "detail": {}
+    },
+    {
+      "step": "normalize_municipio_code",
+      "rows_before": 40205,
+      "rows_after": 40205,
+      "rows_changed": 0,
+      "detail": {
+        "nota": "codigo mantido em 6 dígitos (padrão DATASUS); join deve truncar o lado IBGE de 7 dígitos",
+        "municipio_residencia_ignorado_count": 266,
+        "municipio_residencia_ignorado_pct": "0.66%"
+      }
+    },
+    {
+      "step": "cast_dates",
+      "rows_before": 40205,
+      "rows_after": 40205,
+      "rows_changed": 0,
+      "detail": {
+        "datas_invalidas_dtobito": 0
+      }
+    },
+    {
+      "step": "diagnostic_duplicate_check",
+      "rows_before": 40205,
+      "rows_after": 40205,
+      "rows_changed": 0,
+      "detail": {
+        "contador_duplicado_entre_arquivos": 2197,
+        "colisao_quase_identificador_municipio_data_causa": 2534,
+        "nota": "diagnóstico apenas — nenhuma linha removida por duplicidade não confirmada"
+      }
+    }
+  ]
+}
