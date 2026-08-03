@@ -1,0 +1,86 @@
+{
+  "pipeline_name": "bronze_to_silver_sinan_tb",
+  "started_at": "2026-08-03T03:47:10.548652+00:00",
+  "completed_at": "2026-08-03T03:47:27.510045+00:00",
+  "steps": [
+    {
+      "step": "load_bronze_years",
+      "rows_before": 0,
+      "rows_after": 955995,
+      "rows_changed": -955995,
+      "detail": {}
+    },
+    {
+      "step": "drop_legacy_2015_columns",
+      "rows_before": 955995,
+      "rows_after": 955995,
+      "rows_changed": 0,
+      "detail": {
+        "AGRAVOUTDE_valores_descartados": 23922,
+        "EXTRAPUL_O_valores_descartados": 4275,
+        "OUTRAS_DES_valores_descartados": 176508
+      }
+    },
+    {
+      "step": "cast_types",
+      "rows_before": 955995,
+      "rows_after": 955995,
+      "rows_changed": 0,
+      "detail": {
+        "date_columns_cast": 13
+      }
+    },
+    {
+      "step": "decode_situa_ence",
+      "rows_before": 955995,
+      "rows_after": 955995,
+      "rows_changed": 0,
+      "detail": {
+        "codigos_nao_mapeados": 8358,
+        "valores_nao_mapeados_exemplo": [
+          "0"
+        ]
+      }
+    },
+    {
+      "step": "deduplicate",
+      "rows_before": 955995,
+      "rows_after": 955937,
+      "rows_changed": 58,
+      "detail": {
+        "ndupli_n_2_removidos": 58,
+        "pct_colisao_quase_identificador_diagnostico": "6.67%"
+      }
+    },
+    {
+      "step": "load_population_lookup_filter_header_row",
+      "rows_before": 55718,
+      "rows_after": 55708,
+      "rows_changed": 10,
+      "detail": {
+        "linhas_descartadas_por_ano": {
+          "2015": 1,
+          "2016": 1,
+          "2017": 1,
+          "2018": 1,
+          "2019": 1,
+          "2020": 1,
+          "2021": 1,
+          "2022": 1,
+          "2023": 1,
+          "2024": 1
+        }
+      }
+    },
+    {
+      "step": "join_population",
+      "rows_before": 955937,
+      "rows_after": 955937,
+      "rows_changed": 0,
+      "detail": {
+        "linhas_sem_populacao_correspondente": 5061,
+        "nota": "população nula é esperada e válida (ex.: Boa Esperança do Norte 2022-2023, ADR-003); não descartar linha por isso"
+      }
+    }
+  ]
+}

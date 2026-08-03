@@ -55,3 +55,29 @@ Resultado após o fix: `bronze/sinan_tb/ano=2016/` com 86.210 linhas e 100
 colunas — mesma ordem de grandeza dos anos vizinhos (85.462 em 2015, 90.295
 em 2017), confirmando que o dado do ano estava íntegro o tempo todo; só o
 metadado de filtro é que estava quebrado.
+
+## Dicionário de dados oficial do SINAN Net (TB) — difícil de acessar diretamente
+
+**Status:** referência registrada, para não repetir o esforço de busca.
+
+Confirmar campos codificados do SINAN-TB (`NDUPLIC_N`, `SITUA_ENCE`) contra a
+fonte primária (não texto indexado/resumo de busca) se mostrou repetidamente
+difícil neste projeto: tentativas de `WebFetch` direto em
+`portalsinan.saude.gov.br`, `sitetb.saude.gov.br` e um mirror da UFSC
+falharam (timeout, conexão recusada, ou PDF escaneado/binário sem texto
+extraível) em pelo menos 3 ocasiões distintas.
+
+O documento que finalmente permitiu confirmação direta (campo 62, domínio
+completo de `SITUA_ENCE` com os 10 códigos) foi:
+
+- **`DICI_DADOS_NET_Tuberculose_23_07_2020.pdf`** — dicionário de dados do
+  SINAN Net, versão da ficha 5.0, Ministério da Saúde.
+- Encontrado e lido diretamente pelo usuário do projeto (fora desta sessão);
+  a URL exata de onde foi baixado não foi capturada aqui — se disponível,
+  vale adicionar a este registro para acesso direto no futuro, em vez de
+  depender de busca novamente.
+
+Antes de assumir que um código de campo do SINAN não está documentado ou
+tentar decodificá-lo só por busca indexada, vale procurar especificamente
+por esse nome de arquivo (`DICI_DADOS_NET_*`) — é o padrão de nomenclatura
+oficial dos dicionários de dados por agravo do SINAN Net.

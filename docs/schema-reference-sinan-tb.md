@@ -8,7 +8,9 @@ com nomes de campo confirmados.
 **Fonte:** `bronze/sinan_tb/ano=2023/data.parquet`
 **Por que 2023:** ano mais recente do lote "fechado" (ver ADR-001 — right-censoring
 validado empiricamente), e schema mais estável — evita as 3 colunas legadas
-exclusivas de 2015 (`AGRAVOUTDE`, `EXTRAPUL_O`, `OUTRAS_DES`).
+presentes em 2015-2018, ausentes de 2019 em diante (`AGRAVOUTDE`, `EXTRAPUL_O`,
+`OUTRAS_DES`; confirmado por inspeção real dos 10 anos de bronze, não só da
+amostra 2015/2019/2023 do spike original).
 **Linhas:** 109.854
 **Colunas totais:** 97 (94 do schema original da fonte + 3 de proveniência
 adicionadas pelo script de ingestão)
@@ -59,14 +61,32 @@ residência).
 
 ### Situação de encerramento do caso
 
-**`SITUA_ENCE`** — 4,30% nulo, 9 valores únicos codificados numericamente
-(amostra: `1`, `5`, `3`, `7`, `4`). É o campo pareado com `DT_ENCERRA`
-(já validado no spike): `DT_ENCERRA` diz *quando* o caso foi encerrado,
-`SITUA_ENCE` diz *como* (cura, abandono, óbito, etc.). **O dicionário de
-domínio oficial do SINAN (o que cada código de 1 a 9 significa) não foi
-levantado aqui** — precisa ser confirmado contra a documentação oficial do
-Ministério da Saúde antes de usar esses códigos em qualquer análise, não
-deve ser assumido de memória.
+**`SITUA_ENCE`** — 4,30% nulo (amostra 2023), até 10 valores únicos
+codificados numericamente ao longo dos 10 anos (2015-2024). É o campo
+pareado com `DT_ENCERRA` (já validado no spike): `DT_ENCERRA` diz *quando*
+o caso foi encerrado, `SITUA_ENCE` diz *como* (cura, abandono, óbito, etc.).
+
+**Dicionário de domínio confirmado (2026-08-03, leitura direta do PDF oficial
+do Ministério da Saúde — dicionário de dados SINAN Net v5.0, campo 62; ver
+`docs/known-issues.md` para a referência exata e a dificuldade de acesso):**
+
+| Código | Significado |
+|---|---|
+| 1 | Cura |
+| 2 | Abandono |
+| 3 | Óbito por Tuberculose |
+| 4 | Óbito por outras causas |
+| 5 | Transferência |
+| 6 | Mudança de Diagnóstico |
+| 7 | TB-DR |
+| 8 | Mudança de Esquema |
+| 9 | Falência |
+| 10 | Abandono Primário |
+
+Valores `03`/`04` observados só em 2018 são zero-padding do mesmo código
+`3`/`4`, não categorias novas (normalizado no silver via `lstrip('0')`).
+Valor `0` (presente só em 2015-2017, 8.358 registros) não faz parte deste
+domínio confirmado e permanece não mapeado — não decodificado de memória.
 
 Dois campos parecidos, mas que **não são** o de encerramento final —
 ficam fora desse papel:
@@ -192,7 +212,7 @@ ficam fora desse papel:
   candidatas a descarte no silver, mas isso não foi decidido aqui — este
   documento é só levantamento, a decisão de quais colunas entram no silver é
   separada (ver ADR-001 para o precedente de descarte documentado, aplicado
-  às 3 colunas legadas de 2015).
+  às 3 colunas legadas presentes em 2015-2018 e ausentes de 2019 em diante).
 - Vários pares `SG_UF_*` / `ID_MUNIC_*` distintos (`_NOT`, `_AT`, `_2`,
   `_TRANSF`) sugerem que o SINAN rastreia transferência de caso entre
   unidades notificadoras — vale desenhar o silver assumindo que só o par
