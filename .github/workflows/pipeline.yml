@@ -13,13 +13,19 @@ on:
     - cron: "0 6 1 * *"
   workflow_dispatch: {}  # permite rodar manualmente pela aba Actions
 
+# Nota (2026-08-03): valor original de 45min foi estimativa não validada
+# e causou cancelamento automático no meio da execução real (SIM sozinho,
+# 251 downloads, ainda não tinha terminado aos 46min). 150min dá margem
+# real folgada (~2x o estimado) sem chegar perto do limite de 6h por job
+# do GitHub Actions. Sem custo adicional — minutos são gratuitos em
+# repositório público independente da duração.
 permissions:
   contents: write  # necessário para o commit automático dos parquets atualizados
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150  # ver nota abaixo
 
     steps:
       - name: Checkout
