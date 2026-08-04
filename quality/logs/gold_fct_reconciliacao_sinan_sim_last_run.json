@@ -1,0 +1,53 @@
+{
+  "pipeline_name": "gold_fct_reconciliacao_sinan_sim",
+  "started_at": "2026-08-04T01:02:49.711463+00:00",
+  "completed_at": "2026-08-04T01:02:59.557327+00:00",
+  "steps": [
+    {
+      "step": "load_silver",
+      "rows_before": 0,
+      "rows_after": 951035,
+      "rows_changed": -951035,
+      "detail": {
+        "sim_linhas": 40205,
+        "dim_uf_linhas": 27
+      }
+    },
+    {
+      "step": "aggregate_sinan_obitos",
+      "rows_before": 951035,
+      "rows_after": 270,
+      "rows_changed": 950765,
+      "detail": {
+        "filtro": "situacao_encerramento_desc == 'Óbito por Tuberculose'",
+        "linhas_uf_invalida_excluidas": 4
+      }
+    },
+    {
+      "step": "aggregate_sim_obitos",
+      "rows_before": 40205,
+      "rows_after": 251,
+      "rows_changed": 39954,
+      "detail": {}
+    },
+    {
+      "step": "build_coverage_status",
+      "rows_before": 0,
+      "rows_after": 270,
+      "rows_changed": -270,
+      "detail": {
+        "combinacoes_uf_ano_ausentes": 19
+      }
+    },
+    {
+      "step": "reconcile",
+      "rows_before": 270,
+      "rows_after": 270,
+      "rows_changed": 0,
+      "detail": {
+        "linhas_sem_cobertura_sim": 19,
+        "nota": "diferenca_sim_menos_sinan é nula (não zero) onde status_cobertura_sim='ausente'"
+      }
+    }
+  ]
+}

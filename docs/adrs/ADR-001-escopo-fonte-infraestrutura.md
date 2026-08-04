@@ -99,6 +99,10 @@ A decisão original de usar SCD Type 2 para a dimensão de município (documenta
 
 **Decisão mantida, com justificativa revisada**: SCD2 continua sendo implementada, não porque a janela observada exija, mas porque o pipeline é projetado para ser re-executado com anos futuros (orquestração via GitHub Actions agendado, já decidido nesta ADR) — mudança de código de município é um fenômeno real e documentado ao longo de décadas no Brasil, apenas não observado nesta amostra específica. A implementação é mantida mínima (sem lógica especulativa além do necessário para registrar corretamente o histórico observado), e este adendo documenta explicitamente que a suposição original não foi confirmada pelos dados — apenas re-justificada por um motivo diferente do que motivou a decisão inicial.
 
+## Adendo — hipótese de maturidade do SIM testada e não confirmada (2026-08-03)
+
+`status_maturidade_sim` foi adicionada (regra conservadora, mesmo critério de ~2 anos já usado para o SINAN-TB) para testar se os 4 casos onde SINAN > SIM na reconciliação (de 251 combinações UF×ano com cobertura) se explicavam por atraso de consolidação do SIM. Resultado: só 1 dos 4 casos (PB/2024) está em ano provisório; os outros 3 (AL/2018, AP/2023, MS/2023) persistem mesmo em anos "fechados" por esse critério — a hipótese de maturidade não explica a maioria dos casos reversos. Magnitude pequena em todos os 4 casos (-2 a -12 óbitos) e sem padrão geográfico ou temporal claro identificado. Tratado como anomalia estatística residual não resolvida, documentada explicitamente — não investigado além disso por desproporção entre esforço adicional e volume envolvido (4 de 251 combinações, 1,6%). `status_maturidade_sim` permanece na tabela gold como informação útil, mesmo não explicando integralmente o achado.
+
 ## References
 
 - Pinheiro RS, Andrade VL, Oliveira GP. "Subnotificação da tuberculose no Sistema de Informação de Agravos de Notificação (SINAN)." Cad Saúde Pública 2012; 28:1559-68.
