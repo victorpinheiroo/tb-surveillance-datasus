@@ -124,3 +124,22 @@ silenciosamente.
 O log de qualidade (`quality/logs/bronze_to_silver_sim_last_run.json`, passo
 `normalize_municipio_code`) publica a contagem e o percentual a cada
 execução, para detectar se a magnitude muda em UFs ou anos futuros.
+
+## SINAN-TB: `SG_UF='0'` — hipótese de sentinela, não confirmada (volume imaterial)
+
+**Status:** filtrado explicitamente em `build_fct_taxa_abandono.py`
+(`aggregate_abandono_uf`), não investigado a fundo contra fonte primária.
+
+`SG_UF='0'` aparece em 109 registros do SINAN-TB (2015: 50, 2016: 55, 2017: 4;
+ausente de 2018 em diante) — sem esse filtro, esses registros formavam uma
+28ª "UF" inválida no rollup `gold/fct_taxa_abandono_uf`, sem correspondência
+em `gold/dim_uf` (27 UFs reais).
+
+Hipótese: mesmo padrão de sentinela de valor "ignorado/não informado" já
+confirmado em outras três fontes deste projeto (`SITUA_ENCE='0'` no SINAN-TB,
+`"..."` no IBGE/SIDRA, `CODMUNRES='XX0000'` no SIM). **Não confirmado contra o
+dicionário de dados oficial do SINAN** — decisão deliberada de não investigar,
+por desproporção entre esforço e ganho: volume é 0,012% do total de casos
+encerrados (109 de 911.257), mesmo raciocínio já aplicado para rejeitar a
+checagem do DOU de 2023 (ver ADR-003, alternativas rejeitadas). Se o volume
+crescer em execuções futuras, vale reabrir a investigação.

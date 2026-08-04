@@ -1,0 +1,47 @@
+{
+  "pipeline_name": "gold_fct_taxa_abandono",
+  "started_at": "2026-08-04T00:52:36.559858+00:00",
+  "completed_at": "2026-08-04T00:52:44.800924+00:00",
+  "steps": [
+    {
+      "step": "load_silver",
+      "rows_before": 0,
+      "rows_after": 951035,
+      "rows_changed": -951035,
+      "detail": {}
+    },
+    {
+      "step": "filter_encerrados",
+      "rows_before": 951035,
+      "rows_after": 911257,
+      "rows_changed": 39778,
+      "detail": {
+        "nota": "denominador é só casos com desfecho conhecido, não o total de notificações"
+      }
+    },
+    {
+      "step": "aggregate_abandono",
+      "rows_before": 911257,
+      "rows_after": 39710,
+      "rows_changed": 871547,
+      "detail": {
+        "granularidade": "municipio x ano",
+        "categorias_numerador": [
+          "Abandono",
+          "Abandono Primário"
+        ]
+      }
+    },
+    {
+      "step": "aggregate_abandono_uf",
+      "rows_before": 911257,
+      "rows_after": 270,
+      "rows_changed": 910987,
+      "detail": {
+        "granularidade": "UF x ano",
+        "linhas_uf_invalida_excluidas": 109,
+        "nota": "SG_UF='0' é sentinela conhecido (padrão consistente com SITUA_ENCE='0', IBGE '...', SIM XX0000); hipótese não confirmada contra fonte primária por desproporção de esforço vs. volume (0,012%)"
+      }
+    }
+  ]
+}
