@@ -1,0 +1,48 @@
+name: Pipeline TB-DATASUS
+
+# Referência: ADR-004. Roda em schedule + manualmente (workflow_dispatch).
+# Janela de anos é fixa (2015-2024, ver pipeline/run_pipeline.py) — este
+# workflow reprocessa dado já validado (captura consolidação de casos
+# "provisórios" ao longo do tempo), não estende a janela sozinho.
+
+on:
+  schedule:
+    # Mensal, dia 1, 06:00 UTC — dado de vigilância epidemiológica não
+    # muda em escala de dias; mensal é suficiente para capturar
+    # consolidação de casos sem gastar minutos de execução à toa.
+    - cron: "0 6 1 * *"
+  workflow_dispatch: {}  # permite rodar manualmente pela aba Actions
+
+permissions:
+  contents: write  # necessário para o commit automático dos parquets atualizados
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar pipeline completo (bronze -> silver -> gold)
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: python pipeline/run_pipeline.py --stage all
+
+      - name: Commit e push dos artefatos atualizados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bronze/ silver/ gold/ quality/logs/
+          git diff --staged --quiet && echo "Nenhuma mudança de dado — nada a commitar." && exit 0
+          git commit -m "Automated pipeline run: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push

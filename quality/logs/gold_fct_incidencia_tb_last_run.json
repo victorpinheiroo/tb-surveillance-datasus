@@ -1,0 +1,35 @@
+{
+  "pipeline_name": "gold_fct_incidencia_tb",
+  "started_at": "2026-08-04T13:22:19.428639+00:00",
+  "completed_at": "2026-08-04T13:22:23.355031+00:00",
+  "steps": [
+    {
+      "step": "load_silver",
+      "rows_before": 0,
+      "rows_after": 951035,
+      "rows_changed": -951035,
+      "detail": {
+        "populacao_linhas": 55708
+      }
+    },
+    {
+      "step": "aggregate_casos",
+      "rows_before": 951035,
+      "rows_after": 41074,
+      "rows_changed": 909961,
+      "detail": {
+        "granularidade": "municipio x ano"
+      }
+    },
+    {
+      "step": "join_population",
+      "rows_before": 41074,
+      "rows_after": 41074,
+      "rows_changed": 0,
+      "detail": {
+        "linhas_sem_populacao": 31,
+        "nota": "incidência fica nula quando população ausente (ex. Boa Esperança do Norte); não zerar"
+      }
+    }
+  ]
+}
