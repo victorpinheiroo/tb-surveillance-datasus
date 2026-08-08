@@ -19,29 +19,35 @@ Uso:
 """
 
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
-
-# Sem isso, stdout usa buffer de bloco (não linha-a-linha) sempre que a saída
-# não é um terminal interativo — é exatamente o caso do GitHub Actions (pipe,
-# não TTY). Sem forçar line-buffering aqui e sem PYTHONUNBUFFERED para os
-# scripts filhos, o log de uma execução no Actions só apareceria por inteiro
-# no final (ou não apareceria, se o job for cancelado por timeout no meio),
-# parecendo travado mesmo rodando normalmente.
-sys.stdout.reconfigure(line_buffering=True)
-os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
 YEARS = [str(y) for y in range(2015, 2025)]  # fixo — ver docstring acima
 
 REPO_ROOT = Path(__file__).parent.parent
 
-BRONZE_STEPS = [
+# extract_sim_tb_deaths.py roda um ano por chamada de subprocesso (não um
+# --years com os 10 juntos) — motivo: retenção de memória confirmada
+# empiricamente dentro de chamadas repetidas a sim() (PySUS), crescimento
+# acelerado e não coletável via gc.collect() (medido: ~1.7GB -> ~7.6GB em
+# 80 iterações de um total de ~270). Isolar cada ano em subprocesso
+# separado deixa o SO liberar toda a memória entre um ano e outro, sem
+# depender de entender/corrigir a causa raiz dentro da lib de terceiros.
+SINAN_STEPS = [
     ("ingestion/extract_sinan_tb.py", ["--years"] + YEARS),
-    ("ingestion/extract_sim_tb_deaths.py", ["--years"] + YEARS),
+]
+
+SIM_STEPS = [
+    ("ingestion/extract_sim_tb_deaths.py", ["--years", year])
+    for year in YEARS
+]
+
+POPULATION_STEPS = [
     ("ingestion/extract_ibge_population.py", ["--years"] + YEARS),
 ]
+
+BRONZE_STEPS = SINAN_STEPS + SIM_STEPS + POPULATION_STEPS
 
 SILVER_STEPS = [
     ("transformation/bronze_to_silver/transform_sinan_tb.py", ["--years"] + YEARS),
