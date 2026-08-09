@@ -44,12 +44,13 @@ Orchestrated via GitHub Actions (monthly + manual trigger), 100% free infrastruc
 
 ## Engineering decisions
 
-Six ADRs document context, alternatives considered, and trade-offs for each decision:
+Five ADRs document context, alternatives considered, and trade-offs for each decision:
 
 - **[ADR-001](docs/adrs/ADR-001-scope-source-infrastructure.md)** — source selection, right-censoring empirically validated (2024 data still consolidating), irregular SIM coverage (7% gaps, no single pattern), SCD2 kept by design even without observed need in the current window.
 - **[ADR-002](docs/adrs/ADR-002-case-identity-deduplication.md)** — SINAN-TB has no unique case identifier; deliberate decision not to build a synthetic key (a quasi-identifier collision approach was tested and rejected for producing false positives in large municipalities).
 - **[ADR-003](docs/adrs/ADR-003-population-source-ibge.md)** — 2022/2023 had no population estimate table available; the solution replicates the logic IBGE itself used publicly (2022 Census as proxy), not an invented interpolation.
 - **[ADR-004](docs/adrs/ADR-004-orchestration.md)** — orchestration uses a fixed year window (does not auto-extend), because every new year investigated in this project surfaced a quirk that only human investigation caught.
+- **[ADR-005](docs/adrs/ADR-005-azure-demonstration-scope.md)** — the Azure reference architecture is code-only and never provisioned; a documented case of unexpected Microsoft Purview charges during a small-scale PoC made even a single short-lived "stand up, capture evidence, tear down" window an unacceptable risk under the project's zero-cost constraint.
 
 ## Data quality findings
 

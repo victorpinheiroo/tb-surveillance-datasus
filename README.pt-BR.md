@@ -44,12 +44,13 @@ Orquestração via GitHub Actions (mensal + manual), infraestrutura 100% gratuit
 
 ## Decisões de engenharia — não é volume, é julgamento
 
-Seis ADRs documentam decisões com contexto, alternativas consideradas e trade-offs — não só "o que foi feito", mas por quê e o que foi descartado:
+Cinco ADRs documentam decisões com contexto, alternativas consideradas e trade-offs — não só "o que foi feito", mas por quê e o que foi descartado:
 
 - **[ADR-001](docs/adrs/ADR-001-scope-source-infrastructure.md)** — escolha de fonte, right-censoring validado empiricamente (dado de 2024 ainda em consolidação), cobertura irregular do SIM (7% de gaps, sem padrão único), SCD2 mantida por design mesmo sem uso observado na janela atual.
 - **[ADR-002](docs/adrs/ADR-002-case-identity-deduplication.md)** — o SINAN-TB não tem identificador único de caso; decisão deliberada de não construir uma chave sintética (colisão de quase-identificador testada e rejeitada por gerar falsos positivos em municípios grandes).
 - **[ADR-003](docs/adrs/ADR-003-population-source-ibge.md)** — 2022/2023 sem tabela de estimativa populacional disponível; solução replica a lógica que o próprio IBGE usou publicamente (Censo 2022 como proxy), não uma interpolação inventada.
 - **[ADR-004](docs/adrs/ADR-004-orchestration.md)** — orquestração com janela de anos fixa (não estende automaticamente), porque todo ano novo investigado neste projeto trouxe uma particularidade que só apareceu com investigação humana.
+- **[ADR-005](docs/adrs/ADR-005-azure-demonstration-scope.md)** — a arquitetura de referência Azure é só código, nunca implantada; um caso documentado de cobrança inesperada do Microsoft Purview durante um PoC de pequena escala tornou até uma única janela curta de "subir, capturar evidência, derrubar" um risco inaceitável frente à restrição de custo zero do projeto.
 
 ## Achados de qualidade de dado
 
