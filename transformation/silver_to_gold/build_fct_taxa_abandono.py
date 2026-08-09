@@ -30,10 +30,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "bronze_to_silver"))
 from quality_report import QualityLog
 
 SILVER_SINAN = Path("silver/stg_sinan__tuberculose")
+DIM_UF = Path("gold/dim_uf/data.parquet")
 GOLD_ROOT = Path("gold/fct_taxa_abandono")
 GOLD_ROOT_UF = Path("gold/fct_taxa_abandono_uf")
 
 ABANDONO_CATEGORIAS = ["Abandono", "Abandono Primário"]
+
+
+def load_dim_uf() -> pd.DataFrame:
+    return pd.read_parquet(DIM_UF)
 
 
 def load_silver_sinan(years) -> pd.DataFrame:
@@ -73,7 +78,7 @@ def aggregate_abandono(df: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
     return agg
 
 
-def aggregate_abandono_uf(df: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
+def aggregate_abandono_uf(df: pd.DataFrame, dim_uf: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
     """Rollup em nível de UF — recomendado como visão principal do
     dashboard. Achado empírico (2026-08-03): ~90% dos municípios têm
     menos de 30 casos encerrados/ano em toda a série, tornando a taxa em
@@ -83,10 +88,14 @@ def aggregate_abandono_uf(df: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
 
     `SG_UF='0'` é excluído antes do agrupamento — sentinela conhecido (ver
     docs/known-issues.md), não uma UF real; sem esse filtro ele aparecia
-    como uma 28ª "UF" na tabela gold."""
+    como uma 28ª "UF" na tabela gold.
+
+    `uf_sigla` é trazido via join com dim_uf (mesmo padrão de
+    build_fct_reconciliacao_sinan_sim.py) — código numérico cru
+    (`uf_codigo`) não é legível para quem não decorou a tabela do IBGE;
+    ambas as colunas ficam disponíveis, uf_codigo não é removido."""
     before = len(df)
-    valid_ufs = {"11", "12", "13", "14", "15", "16", "17", "21", "22", "23", "24", "25", "26",
-                 "27", "28", "29", "31", "32", "33", "35", "41", "42", "43", "50", "51", "52", "53"}
+    valid_ufs = set(dim_uf["uf_codigo"])
     invalid_mask = ~df["SG_UF"].astype(str).isin(valid_ufs)
     n_invalid = int(invalid_mask.sum())
     df_valid = df.loc[~invalid_mask].copy()
@@ -97,7 +106,9 @@ def aggregate_abandono_uf(df: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
         status_maturidade=("_status_maturidade_estimado", "first"),
     ).reset_index()
     agg["taxa_abandono_pct"] = (agg["n_abandono"] / agg["n_casos_encerrados"]) * 100
-    agg = agg.rename(columns={"SG_UF": "uf_codigo", "NU_ANO": "ano"})
+    agg["SG_UF"] = agg["SG_UF"].astype(str)
+    agg = agg.merge(dim_uf[["uf_codigo", "uf_sigla"]], left_on="SG_UF", right_on="uf_codigo", how="left")
+    agg = agg.drop(columns=["SG_UF"]).rename(columns={"NU_ANO": "ano"})
     log.record("aggregate_abandono_uf", before, len(agg), {
         "granularidade": "UF x ano",
         "linhas_uf_invalida_excluidas": n_invalid,
@@ -142,11 +153,12 @@ def main():
 
     print("Carregando silver...")
     sinan = load_silver_sinan(args.years)
-    log.record("load_silver", 0, len(sinan))
+    dim_uf = load_dim_uf()
+    log.record("load_silver", 0, len(sinan), {"dim_uf_linhas": len(dim_uf)})
 
     df_enc = filter_encerrados(sinan, log)
     result = aggregate_abandono(df_enc, log)
-    result_uf = aggregate_abandono_uf(df_enc, log)
+    result_uf = aggregate_abandono_uf(df_enc, dim_uf, log)
 
     print("\nGravando gold (município)...")
     write_gold(result, args.years)

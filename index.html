@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigilância de Tuberculose — SINAN × SIM × IBGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E1B2E;
+    --bg-panel: #142438;
+    --bg-panel-alt: #182b42;
+    --accent: #E85C8A;
+    --accent-dim: #a84268;
+    --data: #7FA8C9;
+    --data-dim: #4d6d8a;
+    --text: #E8EEF5;
+    --text-muted: #8fa3ba;
+    --border: #22384f;
+    --warn: #E8B85C;
+    --font-display: 'Source Serif 4', serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  /* Textura de fundo evocando campo de microscopia — bacilos dispersos,
+     sutil, não decorativo demais */
+  .microscopy-field {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.05;
+    background-image: radial-gradient(circle, var(--accent) 1px, transparent 1.5px);
+    background-size: 34px 34px;
+    pointer-events: none;
+  }
+
+  header.hero {
+    position: relative;
+    z-index: 1;
+    padding: 5rem 2rem 4rem;
+    max-width: 900px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 600;
+    margin: 0 0 1.2rem;
+    line-height: 1.15;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+  }
+
+  .hero-stat {
+    margin-top: 2.5rem;
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-block .value {
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .stat-block .label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  section {
+    padding: 3.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  section h2 {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+
+  .section-desc {
+    color: var(--text-muted);
+    max-width: 620px;
+    margin-bottom: 1.8rem;
+    font-size: 0.95rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  select {
+    background: var(--bg-panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.7rem;
+    font-family: var(--font-mono);
+    border-radius: 4px;
+  }
+
+  .chart-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    min-height: 280px;
+  }
+
+  .loading-msg {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 90px;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .bar-row .uf-label {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+  }
+
+  .bar-track {
+    background: var(--bg-panel-alt);
+    border-radius: 3px;
+    overflow: hidden;
+    height: 18px;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: var(--data);
+    border-radius: 3px;
+  }
+
+  .bar-fill.provisorio {
+    background: repeating-linear-gradient(
+      45deg, var(--data), var(--data) 6px, var(--data-dim) 6px, var(--data-dim) 12px
+    );
+  }
+
+  .bar-fill.ausente {
+    background: transparent;
+    border: 1px dashed var(--text-muted);
+  }
+
+  .bar-value {
+    font-family: var(--font-mono);
+    text-align: right;
+    color: var(--text);
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    margin-left: 0.5rem;
+  }
+
+  .badge.provisorio { background: rgba(232, 184, 92, 0.15); color: var(--warn); }
+  .badge.ausente { background: rgba(143, 163, 186, 0.15); color: var(--text-muted); }
+
+  .quality-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .quality-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 1.2rem 1.4rem;
+  }
+
+  .quality-card h3 {
+    font-size: 0.95rem;
+    margin: 0 0 0.4rem;
+    font-family: var(--font-mono);
+    color: var(--accent);
+  }
+
+  .quality-card p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+
+  footer {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="microscopy-field"></div>
+
+<header class="hero">
+  <div class="eyebrow">Engenharia de Dados · SINAN · SIM · IBGE</div>
+  <h1>Vigilância de tuberculose no Brasil, reconstruída de três fontes que não conversam entre si.</h1>
+  <p class="hero-sub">
+    Pipeline público de ponta a ponta sobre dado real de saúde pública brasileira —
+    tratamento de subnotificação, inconsistência de schema e reconciliação entre
+    fontes independentes. Não é dashboard de tutorial: cada decisão de engenharia
+    está documentada e validada contra o dado.
+  </p>
+  <div class="hero-stat" id="hero-stats">
+    <div class="stat-block"><div class="value">—</div><div class="label">carregando…</div></div>
+  </div>
+</header>
+
+<main>
+
+  <section id="incidencia">
+    <h2>Incidência por 100 mil habitantes</h2>
+    <p class="section-desc">
+      Notificações do SINAN-TB normalizadas pela população IBGE do ano correspondente.
+      Anos marcados como <span class="badge provisorio">provisório</span> ainda estão em
+      consolidação (right-censoring) — números tendem a subir com o tempo.
+    </p>
+    <div class="controls">
+      Ano: <select id="year-incidencia"></select>
+    </div>
+    <div class="chart-panel" id="chart-incidencia">
+      <div class="loading-msg">Carregando dado do gold layer…</div>
+    </div>
+  </section>
+
+  <section id="abandono">
+    <h2>Taxa de abandono de tratamento</h2>
+    <p class="section-desc">
+      Por UF (visão estável — nível de município tem amostra pequena demais para
+      a maioria dos ~5.570 municípios brasileiros). O denominador
+      (casos com desfecho conhecido) aparece junto com a taxa, não escondido.
+    </p>
+    <div class="controls">
+      Ano: <select id="year-abandono"></select>
+    </div>
+    <div class="chart-panel" id="chart-abandono">
+      <div class="loading-msg">Carregando dado do gold layer…</div>
+    </div>
+  </section>
+
+  <section id="reconciliacao">
+    <h2>SINAN × SIM — estimativa de subnotificação</h2>
+    <p class="section-desc">
+      Óbitos por tuberculose encerrados no SINAN vs. óbitos por tuberculose
+      registrados no SIM, por UF. UFs sem cobertura do SIM naquele ano aparecem
+      tracejadas — ausência de dado, não zero óbitos.
+    </p>
+    <div class="controls">
+      Ano: <select id="year-reconciliacao"></select>
+    </div>
+    <div class="chart-panel" id="chart-reconciliacao">
+      <div class="loading-msg">Carregando dado do gold layer…</div>
+    </div>
+  </section>
+
+  <section id="qualidade">
+    <h2>Achados de qualidade de dado</h2>
+    <p class="section-desc">
+      O valor de engenharia deste projeto está tanto aqui quanto nos números acima —
+      cada achado abaixo foi investigado até a causa raiz, não só contornado.
+    </p>
+    <div class="quality-grid">
+      <div class="quality-card">
+        <h3>Bug de metadado no catálogo do PySUS</h3>
+        <p>TUBEBR16.parquet existia no catálogo remoto mas retornava vazio — causa raiz: <code>group_id</code> nulo excluindo o arquivo de qualquer query filtrada por agravo. Contornado via query sem filtro de grupo.</p>
+      </div>
+      <div class="quality-card">
+        <h3>Sentinela de valor ausente, três fontes, três formatos</h3>
+        <p>SINAN-TB usa <code>"0"</code>, IBGE/SIDRA usa <code>"..."</code>, SIM usa o padrão <code>UF+0000</code> — mesma ideia semântica ("não identificado"), três convenções diferentes, cada uma identificada e tratada explicitamente.</p>
+      </div>
+      <div class="quality-card">
+        <h3>Cobertura irregular do SIM</h3>
+        <p>19 de 270 combinações UF×ano (7%) sem arquivo publicado, espalhadas por 8 estados sem padrão único — tratado como limitação declarada (<code>status_cobertura_sim</code>), não preenchido por fonte alternativa.</p>
+      </div>
+      <div class="quality-card">
+        <h3>Hipótese testada e parcialmente refutada</h3>
+        <p>4 casos onde SINAN &gt; SIM na reconciliação não se explicam por atraso de consolidação do SIM, como seria esperado — documentado como anomalia residual não resolvida, não forçado a se encaixar na narrativa.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    Código, ADRs e dado completo em
+    <a href="https://github.com/victorpinheiroo/tb-surveillance-datasus" target="_blank">github.com/victorpinheiroo/tb-surveillance-datasus</a>
+  </p>
+</footer>
+
+<script type="module">
+import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm';
+
+// ATENÇÃO: caminho ainda não testado contra dado real — pipeline de
+// produção estava rodando no momento em que este esqueleto foi escrito.
+// Confirmar branch (master vs main) e que os arquivos gold/ estão
+// publicados antes de considerar isso validado.
+const REPO_RAW_BASE = 'https://raw.githubusercontent.com/victorpinheiroo/tb-surveillance-datasus/master';
+const YEARS = Array.from({length: 10}, (_, i) => 2015 + i);
+
+function yearUrls(table) {
+  return YEARS.map(y => `${REPO_RAW_BASE}/gold/${table}/ano=${y}/data.parquet`);
+}
+
+let conn;
+
+async function initDuckDB() {
+  const bundles = duckdb.getJsDelivrBundles();
+  const bundle = await duckdb.selectBundle(bundles);
+  const worker = await duckdb.createWorker(bundle.mainWorker);
+  const logger = new duckdb.ConsoleLogger();
+  const db = new duckdb.AsyncDuckDB(logger, worker);
+  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  conn = await db.connect();
+}
+
+function populateYearSelect(selectId, defaultYear) {
+  const el = document.getElementById(selectId);
+  YEARS.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === defaultYear) opt.selected = true;
+    el.appendChild(opt);
+  });
+}
+
+function renderBars(containerId, rows, { labelKey, valueKey, statusKey, formatValue, maxValue }) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const max = maxValue ?? Math.max(...rows.map(r => r[valueKey] || 0), 1);
+
+  rows.forEach(row => {
+    const pct = ((row[valueKey] || 0) / max) * 100;
+    const statusClass = statusKey && row[statusKey] === 'provisorio' ? 'provisorio'
+                       : statusKey && row[statusKey] === 'ausente' ? 'ausente' : '';
+    const div = document.createElement('div');
+    div.className = 'bar-row';
+    div.innerHTML = `
+      <div class="uf-label">${row[labelKey]}</div>
+      <div class="bar-track"><div class="bar-fill ${statusClass}" style="width:${pct}%"></div></div>
+      <div class="bar-value">${formatValue(row)}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+async function loadIncidencia(year) {
+  const sql = `
+    SELECT ID_MN_RESI, casos, incidencia_por_100k, status_maturidade
+    FROM read_parquet(${JSON.stringify(yearUrls('fct_incidencia_tb'))})
+    WHERE NU_ANO = ${year} AND incidencia_por_100k IS NOT NULL
+    ORDER BY incidencia_por_100k DESC LIMIT 15
+  `;
+  const result = await conn.query(sql);
+  const rows = result.toArray().map(r => r.toJSON());
+  renderBars('chart-incidencia', rows, {
+    labelKey: 'ID_MN_RESI', valueKey: 'incidencia_por_100k', statusKey: 'status_maturidade',
+    formatValue: r => `${r.incidencia_por_100k.toFixed(1)}/100k`,
+  });
+}
+
+async function loadAbandono(year) {
+  const sql = `
+    SELECT uf_sigla, taxa_abandono_pct, n_casos_encerrados, status_maturidade
+    FROM read_parquet(${JSON.stringify(yearUrls('fct_taxa_abandono_uf'))})
+    WHERE ano = ${year}
+    ORDER BY taxa_abandono_pct DESC
+  `;
+  const result = await conn.query(sql);
+  const rows = result.toArray().map(r => r.toJSON());
+  renderBars('chart-abandono', rows, {
+    labelKey: 'uf_sigla', valueKey: 'taxa_abandono_pct', statusKey: 'status_maturidade',
+    formatValue: r => `${r.taxa_abandono_pct.toFixed(1)}% (n=${r.n_casos_encerrados})`,
+    maxValue: 100,
+  });
+}
+
+async function loadReconciliacao(year) {
+  const sql = `
+    SELECT uf_sigla, obitos_sinan, obitos_sim, status_cobertura_sim
+    FROM read_parquet(${JSON.stringify(yearUrls('fct_reconciliacao_sinan_sim'))})
+    WHERE ano = ${year}
+    ORDER BY obitos_sim DESC NULLS LAST
+  `;
+  const result = await conn.query(sql);
+  const rows = result.toArray().map(r => r.toJSON());
+  renderBars('chart-reconciliacao', rows, {
+    labelKey: 'uf_sigla', valueKey: 'obitos_sim', statusKey: 'status_cobertura_sim',
+    formatValue: r => r.status_cobertura_sim === 'ausente'
+      ? 'sem SIM'
+      : `SIM ${r.obitos_sim} / SINAN ${r.obitos_sinan}`,
+  });
+}
+
+async function loadHeroStats() {
+  const sql = `
+    SELECT
+      SUM(obitos_sim)::DOUBLE AS total_sim,
+      SUM(obitos_sinan)::DOUBLE AS total_sinan
+    FROM read_parquet(${JSON.stringify(yearUrls('fct_reconciliacao_sinan_sim'))})
+    WHERE status_cobertura_sim = 'disponivel'
+  `;
+  // Cast explícito para DOUBLE na SQL: SUM() de coluna BIGINT retorna
+  // HUGEINT (128 bits) no DuckDB, e o duckdb-wasm não decodifica esse
+  // tipo de forma confiável via .toJSON() no navegador (confirmado:
+  // resultado correto via DuckDB nativo, incorreto via duckdb-wasm) —
+  // evitado na origem em vez de tratado depois de convertido.
+  const result = await conn.query(sql);
+  const row = result.toArray()[0].toJSON();
+  const totalSim = Number(row.total_sim);
+  const totalSinan = Number(row.total_sinan);
+  const subnotificacao = ((totalSim - totalSinan) / totalSinan * 100).toFixed(0);
+  document.getElementById('hero-stats').innerHTML = `
+    <div class="stat-block">
+      <div class="value">+${subnotificacao}%</div>
+      <div class="label">óbitos no SIM além do que o SINAN encerrou como TB</div>
+    </div>
+  `;
+}
+
+async function main() {
+  populateYearSelect('year-incidencia', 2023);
+  populateYearSelect('year-abandono', 2023);
+  populateYearSelect('year-reconciliacao', 2023);
+
+  await initDuckDB();
+
+  await Promise.all([
+    loadIncidencia(2023),
+    loadAbandono(2023),
+    loadReconciliacao(2023),
+    loadHeroStats(),
+  ]);
+
+  document.getElementById('year-incidencia').addEventListener('change', e => loadIncidencia(Number(e.target.value)));
+  document.getElementById('year-abandono').addEventListener('change', e => loadAbandono(Number(e.target.value)));
+  document.getElementById('year-reconciliacao').addEventListener('change', e => loadReconciliacao(Number(e.target.value)));
+}
+
+main().catch(err => {
+  console.error(err);
+  document.querySelectorAll('.loading-msg').forEach(el => {
+    el.textContent = 'Erro ao carregar dado — ver console (provavelmente caminho do parquet ainda não validado).';
+  });
+});
+</script>
+
+</body>
+</html>
