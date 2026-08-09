@@ -1,103 +1,105 @@
 # Schema Reference — SINAN-TB (bronze)
 
-Levantamento real de schema do SINAN-TB, gerado a partir de dado já extraído
-em `bronze/sinan_tb/ano=2023/data.parquet` — não de hipótese ou documentação
-de terceiros. Serve de referência para desenhar a transformação bronze→silver
-com nomes de campo confirmados.
+Real schema survey of SINAN-TB, generated from data already extracted in
+`bronze/sinan_tb/ano=2023/data.parquet` — not from hypothesis or third-party
+documentation. Serves as a reference for designing the bronze→silver
+transformation with confirmed field names.
 
-**Fonte:** `bronze/sinan_tb/ano=2023/data.parquet`
-**Por que 2023:** ano mais recente do lote "fechado" (ver ADR-001 — right-censoring
-validado empiricamente), e schema mais estável — evita as 3 colunas legadas
-presentes em 2015-2018, ausentes de 2019 em diante (`AGRAVOUTDE`, `EXTRAPUL_O`,
-`OUTRAS_DES`; confirmado por inspeção real dos 10 anos de bronze, não só da
-amostra 2015/2019/2023 do spike original).
-**Linhas:** 109.854
-**Colunas totais:** 97 (94 do schema original da fonte + 3 de proveniência
-adicionadas pelo script de ingestão)
+**Source:** `bronze/sinan_tb/ano=2023/data.parquet`
+**Why 2023:** most recent year of the "closed" batch (see ADR-001 —
+right-censoring empirically validated), and the most stable schema — avoids
+the 3 legacy columns present in 2015-2018, absent from 2019 onward
+(`AGRAVOUTDE`, `EXTRAPUL_O`, `OUTRAS_DES`; confirmed by real inspection of
+all 10 years of bronze, not just the original spike's 2015/2019/2023
+sample).
+**Rows:** 109,854
+**Total columns:** 97 (94 from the original source schema + 3 provenance
+columns added by the ingestion script)
 
-**Metodologia de "% nulo":** mesma lógica já validada no spike de `DT_ENCERRA`
-(ver ADR-001) — string vazia após `strip()` conta como ausente, não só `NaN`.
-Todo o schema do SINAN-TB é `dtype=object` (texto), então essa distinção
-importa em praticamente todas as colunas, não só nas de data.
+**"% Null" methodology:** same logic already validated in the `DT_ENCERRA`
+spike (see ADR-001) — an empty string after `strip()` counts as missing, not
+just `NaN`. SINAN-TB's entire schema is `dtype=object` (text), so this
+distinction matters for practically every column, not just date fields.
 
-## Campos-chave identificados
+## Key fields identified
 
-### Identificador único de notificação/caso
+### Unique notification/case identifier
 
-**Não encontrado.** Nenhuma coluna se aproxima de ser única por linha —
-com 109.854 registros, a maior cardinalidade entre todas as 94 colunas de
-origem é `ID_MN_RESI` (município de residência), com apenas 4.268 valores
-distintos. Não há um campo tipo `NU_NOTIFIC` ou similar neste export.
-`NDUPLIC_N` (89,87% nulo, valores `0`/`1`/`2`) parece ser uma *flag* de
-notificação duplicada, não um identificador.
+**Not found.** No column comes close to being unique per row — with 109,854
+records, the highest cardinality among all 94 source columns is
+`ID_MN_RESI` (municipality of residence), with only 4,268 distinct values.
+There's no `NU_NOTIFIC`-like field in this export. `NDUPLIC_N` (89.87% null,
+values `0`/`1`/`2`) appears to be a duplicate-notification *flag*, not an
+identifier.
 
-**Implicação para o silver:** ou (a) gerar uma chave surrogate por linha na
-ingestão/bronze→silver, documentando explicitamente que é sintética e não
-vem da fonte, ou (b) investigar se o SINAN/DBF original tem um número de
-registro interno que o PySUS descarta na conversão para Parquet — precisa
-de decisão explícita antes de desenhar joins ou dedupe no silver.
+**Implication for silver:** either (a) generate a surrogate row key at
+ingestion/bronze→silver, explicitly documenting it as synthetic and not
+sourced, or (b) investigate whether the original SINAN/DBF has an internal
+record number that PySUS discards during Parquet conversion — requires an
+explicit decision before designing joins or dedup logic in silver.
 
-### Município de notificação
+### Municipality of notification
 
-**`ID_MUNICIP`** — código IBGE (7 dígitos), 0% nulo, 3.968 valores únicos.
-Exemplos: `3509601`, `3505708`, `3513801`, `4118204`, `3515707` (os 2
-primeiros dígitos batem com `SG_UF_NOT`: `35`=SP, `41`=PR).
+**`ID_MUNICIP`** — IBGE code (7 digits), 0% null, 3,968 unique values.
+Examples: `3509601`, `3505708`, `3513801`, `4118204`, `3515707` (the first 2
+digits match `SG_UF_NOT`: `35`=SP, `41`=PR).
 
-Existe também `ID_MUNIC_A` (0,29% nulo, 3.980 únicos) — mesmo padrão de
-código, parece ser o município de notificação "atualizado" (pós-transferência
-dentro do próprio registro); e `ID_MUNIC_2` (23,56% nulo) e `MUN_TRANSF`
-(95,10% nulo), ligados a fluxos de transferência de caso. Só `ID_MUNICIP` é
-necessário para a pergunta de negócio do projeto (incidência por
-município/UF); os demais são candidatos a ficar de fora do silver ou a virar
-metadado de auditoria, não dado analítico.
+There is also `ID_MUNIC_A` (0.29% null, 3,980 unique) — same code pattern,
+appears to be the "updated" notification municipality (post-transfer within
+the same record); and `ID_MUNIC_2` (23.56% null) and `MUN_TRANSF` (95.10%
+null), tied to case-transfer workflows. Only `ID_MUNICIP` is needed for the
+project's business question (incidence by municipality/state); the rest are
+candidates to leave out of silver or become audit metadata, not analytical
+data.
 
-### Município de residência do paciente
+### Patient's municipality of residence
 
-**`ID_MN_RESI`** — código IBGE (7 dígitos), 0% nulo, 4.268 valores únicos
-(mais granular que `ID_MUNICIP`, esperado — mais gente reside fora de onde
-notifica do que o contrário). Este é o campo relevante para reconciliação
-geográfica SINAN×SIM (óbitos no SIM também são atribuídos ao município de
-residência).
+**`ID_MN_RESI`** — IBGE code (7 digits), 0% null, 4,268 unique values (more
+granular than `ID_MUNICIP`, expected — more people reside outside where they
+were notified than the reverse). This is the relevant field for SINAN×SIM
+geographic reconciliation (SIM deaths are also attributed to municipality of
+residence).
 
-### Situação de encerramento do caso
+### Case closure status
 
-**`SITUA_ENCE`** — 4,30% nulo (amostra 2023), até 10 valores únicos
-codificados numericamente ao longo dos 10 anos (2015-2024). É o campo
-pareado com `DT_ENCERRA` (já validado no spike): `DT_ENCERRA` diz *quando*
-o caso foi encerrado, `SITUA_ENCE` diz *como* (cura, abandono, óbito, etc.).
+**`SITUA_ENCE`** — 4.30% null (2023 sample), up to 10 distinct numerically
+coded values across the 10 years (2015-2024). It's the field paired with
+`DT_ENCERRA` (already validated in the spike): `DT_ENCERRA` says *when* the
+case was closed, `SITUA_ENCE` says *how* (cure, abandonment, death, etc.).
 
-**Dicionário de domínio confirmado (2026-08-03, leitura direta do PDF oficial
-do Ministério da Saúde — dicionário de dados SINAN Net v5.0, campo 62; ver
-`docs/known-issues.md` para a referência exata e a dificuldade de acesso):**
+**Domain dictionary confirmed (2026-08-03, direct reading of the official
+Ministry of Health PDF — SINAN Net v5.0 data dictionary, field 62; see
+`docs/known-issues.md` for the exact reference and the difficulty accessing
+it):**
 
-| Código | Significado |
+| Code | Meaning |
 |---|---|
-| 1 | Cura |
-| 2 | Abandono |
-| 3 | Óbito por Tuberculose |
-| 4 | Óbito por outras causas |
-| 5 | Transferência |
-| 6 | Mudança de Diagnóstico |
-| 7 | TB-DR |
-| 8 | Mudança de Esquema |
-| 9 | Falência |
-| 10 | Abandono Primário |
+| 1 | Cure |
+| 2 | Abandonment |
+| 3 | Death from Tuberculosis |
+| 4 | Death from other causes |
+| 5 | Transfer |
+| 6 | Change of Diagnosis |
+| 7 | Drug-resistant TB (TB-DR) |
+| 8 | Regimen Change |
+| 9 | Treatment Failure |
+| 10 | Primary Abandonment |
 
-Valores `03`/`04` observados só em 2018 são zero-padding do mesmo código
-`3`/`4`, não categorias novas (normalizado no silver via `lstrip('0')`).
-Valor `0` (presente só em 2015-2017, 8.358 registros) não faz parte deste
-domínio confirmado e permanece não mapeado — não decodificado de memória.
+Values `03`/`04` observed only in 2018 are zero-padding of the same code
+`3`/`4`, not new categories (normalized in silver via `lstrip('0')`). Value
+`0` (present only in 2015-2017, 8,358 records) is not part of this confirmed
+domain and remains unmapped — not decoded from memory.
 
-Dois campos parecidos, mas que **não são** o de encerramento final —
-ficam fora desse papel:
-- `SITUA_9_M` (99,98% nulo) e `SITUA_12_M` (100,00% nulo, com raríssimas
-  exceções) — situação de acompanhamento em pontos fixos do tratamento (9 e
-  12 meses), não o desfecho final do caso.
-- Não existe coluna `TPCASO` neste schema.
+Two similar-looking fields that are **not** the final closure field — kept
+out of that role:
+- `SITUA_9_M` (99.98% null) and `SITUA_12_M` (100.00% null, with very rare
+  exceptions) — follow-up status at fixed treatment checkpoints (9 and 12
+  months), not the case's final outcome.
+- There is no `TPCASO` column in this schema.
 
-## Tabela completa — colunas de origem (94)
+## Full table — source columns (94)
 
-| Coluna | Tipo (dtype) | % Nulo | Valores únicos (amostra) |
+| Column | Type (dtype) | % Null | Unique values (sample) |
 |---|---|---|---|
 | `TP_NOT` | object | 0.00% | `2` |
 | `ID_AGRAVO` | object | 0.00% | `A169` |
@@ -123,13 +125,13 @@ ficam fora desse papel:
 | `DT_TRANSUS` | object | 93.88% | `20231208`, `20230820`, `20240110`, `20230523`, `20230927` |
 | `DT_TRANSDM` | object | 99.06% | `20240410`, `20230502`, `20230426`, `20240417`, `20240209` |
 | `DT_TRANSSM` | object | 43.58% | `20230321`, `20240216`, `20230801`, `20240126`, `20230814` |
-| `DT_TRANSRM` | object | 100.00% | *(sem valores — 100% nulo)* |
+| `DT_TRANSRM` | object | 100.00% | *(no values — 100% null)* |
 | `DT_TRANSRS` | object | 98.46% | `20230727`, `20230510`, `20230426`, `20240119`, `20230616` |
 | `DT_TRANSSE` | object | 64.38% | `20240520`, `20240822`, `20240815`, `20231027`, `20250604` |
-| `CS_FLXRET` | object | 100.00% | *(sem valores — 100% nulo)* |
-| `FLXRECEBI` | object | 100.00% | *(sem valores — 100% nulo)* |
-| `MIGRADO_W` | object | 100.00% | *(sem valores — 100% nulo)* |
-| `ID_OCUPA_N` | object | 100.00% | *(sem valores — 100% nulo)* |
+| `CS_FLXRET` | object | 100.00% | *(no values — 100% null)* |
+| `FLXRECEBI` | object | 100.00% | *(no values — 100% null)* |
+| `MIGRADO_W` | object | 100.00% | *(no values — 100% null)* |
+| `ID_OCUPA_N` | object | 100.00% | *(no values — 100% null)* |
 | `TRATAMENTO` | object | 0.00% | `1`, `3`, `5`, `2`, `4` |
 | `INSTITUCIO` | object | 99.98% | `9`, `1`, `2` |
 | `RAIOX_TORA` | object | 1.88% | `4`, `1`, `3`, `2` |
@@ -172,7 +174,7 @@ ficam fora desse papel:
 | `BACILOSC_5` | object | 37.60% | `3`, `2`, `4`, `1` |
 | `BACILOSC_6` | object | 40.55% | `3`, `2`, `4`, `1` |
 | `TRATSUP_AT` | object | 21.32% | `2`, `1`, `9` |
-| `DT_MUDANCA` | object | ~100.00% | `18991230`, `20231227` *(≈2 valores não-vazios em 109.854 linhas)* |
+| `DT_MUDANCA` | object | ~100.00% | `18991230`, `20231227` *(≈2 non-empty values in 109,854 rows)* |
 | `NU_COMU_EX` | object | 16.34% | `1`, `0`, `2`, `4`, `3` |
 | `SITUA_9_M` | object | 99.98% | `12`, `2`, `5`, `1`, `3` |
 | `SITUA_12_M` | object | ~100.00% | `5`, `11`, `1` |
@@ -194,28 +196,29 @@ ficam fora desse papel:
 | `UF_TRANSF` | object | 94.78% | `42`, `29`, `27`, `35`, `43` |
 | `MUN_TRANSF` | object | 95.10% | `42`, `29`, `27`, `35`, `43` |
 
-## Colunas de proveniência (adicionadas pela ingestão, não fazem parte do schema da fonte)
+## Provenance columns (added by ingestion, not part of the source schema)
 
-| Coluna | Tipo (dtype) | % Nulo | Valores únicos (amostra) |
+| Column | Type (dtype) | % Null | Unique values (sample) |
 |---|---|---|---|
 | `_source_dataset` | object | 0.00% | `SINAN-TUBE-2023` |
 | `_ingested_at` | object | 0.00% | `2026-08-03T00:30:20.345312+00:` |
 | `_status_maturidade_estimado` | object | 0.00% | `fechado` |
 
-## Observações gerais
+## General observations
 
-- **Todo o schema é `dtype=object`** (texto) — inclusive campos numéricos e de
-  data (`YYYYMMDD` como string). Conversão de tipo é responsabilidade
-  explícita do silver, não algo que já vem pronto do bronze.
-- Colunas 100% (ou quase 100%) nulas neste ano (`DT_TRANSRM`, `CS_FLXRET`,
-  `FLXRECEBI`, `MIGRADO_W`, `ID_OCUPA_N`, `DT_MUDANCA`, `SITUA_12_M`) são
-  candidatas a descarte no silver, mas isso não foi decidido aqui — este
-  documento é só levantamento, a decisão de quais colunas entram no silver é
-  separada (ver ADR-001 para o precedente de descarte documentado, aplicado
-  às 3 colunas legadas presentes em 2015-2018 e ausentes de 2019 em diante).
-- Vários pares `SG_UF_*` / `ID_MUNIC_*` distintos (`_NOT`, `_AT`, `_2`,
-  `_TRANSF`) sugerem que o SINAN rastreia transferência de caso entre
-  unidades notificadoras — vale desenhar o silver assumindo que só o par
-  "de notificação original" (`ID_MUNICIP`/`SG_UF_NOT`) e o "de residência"
-  (`ID_MN_RESI`/`SG_UF`) são necessários às perguntas de negócio do projeto,
-  a menos que uma decisão explícita amplie esse escopo.
+- **The entire schema is `dtype=object`** (text) — including numeric and
+  date fields (`YYYYMMDD` as a string). Type conversion is silver's explicit
+  responsibility, not something that comes pre-done from bronze.
+- Columns that are 100% (or nearly 100%) null in this year (`DT_TRANSRM`,
+  `CS_FLXRET`, `FLXRECEBI`, `MIGRADO_W`, `ID_OCUPA_N`, `DT_MUDANCA`,
+  `SITUA_12_M`) are candidates for dropping in silver, but that wasn't
+  decided here — this document is only a survey; the decision on which
+  columns enter silver is separate (see ADR-001 for the precedent of
+  documented column dropping, applied to the 3 legacy columns present in
+  2015-2018 and absent from 2019 onward).
+- Several distinct `SG_UF_*` / `ID_MUNIC_*` pairs (`_NOT`, `_AT`, `_2`,
+  `_TRANSF`) suggest SINAN tracks case transfers between notifying units —
+  worth designing silver assuming only the "original notification" pair
+  (`ID_MUNICIP`/`SG_UF_NOT`) and the "residence" pair (`ID_MN_RESI`/`SG_UF`)
+  are needed for the project's business questions, unless an explicit
+  decision expands that scope.

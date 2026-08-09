@@ -1,170 +1,170 @@
 # Known Issues
 
-Problemas conhecidos de dependências/fontes de terceiros usados neste projeto,
-documentados aqui em vez de ficarem implícitos em comentários de código
-espalhados. Ver também `docs/adrs/` para decisões derivadas destes problemas.
+Known issues in third-party dependencies/sources used in this project,
+documented here instead of being left implicit in scattered code comments.
+See also `docs/adrs/` for decisions derived from these issues.
 
-## PySUS: `sinan()` retorna DataFrame vazio para `TUBEBR16.parquet` (SINAN-TB, ano 2016)
+## PySUS: `sinan()` returns an empty DataFrame for `TUBEBR16.parquet` (SINAN-TB, year 2016)
 
-**Status:** contornado em `ingestion/extract_sinan_tb.py`.
+**Status:** worked around in `ingestion/extract_sinan_tb.py`.
 
-### Sintoma
+### Symptom
 
-`sinan(disease="tube", year=2016, as_dataframe=True)` retorna um
-`pandas.DataFrame` vazio (`shape == (0, 0)`), sem levantar exceção — o mesmo
-padrão silencioso já visto antes para o gap de cobertura do SIM (ver ADR-001),
-mas com uma causa completamente diferente: aqui o arquivo **existe e tem dado
-íntegro** no catálogo remoto do PySUS; o problema é só no metadado usado para
-filtrá-lo.
+`sinan(disease="tube", year=2016, as_dataframe=True)` returns an empty
+`pandas.DataFrame` (`shape == (0, 0)`), without raising an exception — the
+same silent pattern already seen for the SIM coverage gap (see ADR-001), but
+with a completely different cause: here the file **exists and has healthy
+data** in PySUS's remote catalog; the problem is only in the metadata used to
+filter it.
 
-### Causa raiz investigada
+### Investigated root cause
 
-O arquivo `TUBEBR16.parquet` (SINAN, agravo `TUBE`, ano 2016) está presente no
-catálogo remoto do PySUS, mas com o campo de `group_id` nulo nos metadados
-daquele registro específico. A chamada `sinan(disease="tube", year=2016)`
-internamente faz `PySUS.query(dataset="sinan", group="TUBE", year=2016)`, que
-filtra por `group` — como o `group_id` desse arquivo está nulo no catálogo, o
-filtro exclui o arquivo da lista de resultados antes mesmo de tentar baixá-lo.
-O resultado é um `DataFrame` vazio, indistinguível à primeira vista de "não
-há dado para esse ano" (que é uma situação real e esperada em outros casos,
-ex.: gaps de cobertura do SIM).
+The file `TUBEBR16.parquet` (SINAN, condition `TUBE`, year 2016) is present
+in PySUS's remote catalog, but with a null `group_id` field in that specific
+record's metadata. The call `sinan(disease="tube", year=2016)` internally
+does `PySUS.query(dataset="sinan", group="TUBE", year=2016)`, which filters
+by `group` — since this file's `group_id` is null in the catalog, the filter
+excludes the file from the result list before it's ever downloaded. The
+result is an empty `DataFrame`, indistinguishable at first glance from "no
+data for this year" (a real, expected situation in other cases, e.g. SIM
+coverage gaps).
 
-Todos os outros anos do SINAN-TB (2015, 2017–2024) têm `group_id` presente e
-correto no catálogo; 2016 é um caso isolado.
+All other SINAN-TB years (2015, 2017–2024) have a present and correct
+`group_id` in the catalog; 2016 is an isolated case.
 
-### Contorno aplicado
+### Applied workaround
 
-Em `ingestion/extract_sinan_tb.py`, a função `extract_year()` detecta quando
-`sinan()` retorna um DataFrame vazio e, nesse caso, chama
-`_fetch_without_group_filter()` como fallback: essa função consulta o
-catálogo via `PySUS.query(dataset="sinan")` **sem** o filtro de `group`,
-filtra os resultados no lado do cliente pelo nome do arquivo (prefixo
-`TUBEBR16`), baixa e lê o(s) arquivo(s) encontrado(s) diretamente.
+In `ingestion/extract_sinan_tb.py`, the `extract_year()` function detects
+when `sinan()` returns an empty DataFrame and, in that case, calls
+`_fetch_without_group_filter()` as a fallback: this function queries the
+catalog via `PySUS.query(dataset="sinan")` **without** the `group` filter,
+filters the results client-side by filename (prefix `TUBEBR16`), and
+downloads and reads the matching file(s) directly.
 
-Se mesmo assim nada for encontrado, a função levanta `RuntimeError`
-explícito — o mesmo princípio já aplicado ao gap de cobertura do SIM em
-`extract_sim_tb_deaths.py`: DataFrame vazio nunca é tratado como "sem dado"
-por padrão, só depois de confirmar que não há mesmo nenhum arquivo, com ou
-sem o filtro de metadado.
+If nothing is found even then, the function raises an explicit
+`RuntimeError` — the same principle already applied to the SIM coverage gap
+in `extract_sim_tb_deaths.py`: an empty DataFrame is never treated as "no
+data" by default, only after confirming there really is no file at all, with
+or without the metadata filter.
 
-O `_metadata.txt` gerado para o bronze de 2016 registra
-`extraction_method=fallback_no_group_filter`, para que o uso do contorno
-fique rastreável na trilha de proveniência, não escondido no código.
+The `_metadata.txt` generated for the 2016 bronze partition records
+`extraction_method=fallback_no_group_filter`, so the use of the workaround is
+traceable in the provenance trail, not hidden in the code.
 
-Resultado após o fix: `bronze/sinan_tb/ano=2016/` com 86.210 linhas e 100
-colunas — mesma ordem de grandeza dos anos vizinhos (85.462 em 2015, 90.295
-em 2017), confirmando que o dado do ano estava íntegro o tempo todo; só o
-metadado de filtro é que estava quebrado.
+Result after the fix: `bronze/sinan_tb/ano=2016/` with 86,210 rows and 100
+columns — same order of magnitude as neighboring years (85,462 in 2015,
+90,295 in 2017), confirming the year's data was healthy all along; only the
+filter metadata was broken.
 
-## Dicionário de dados oficial do SINAN Net (TB) — difícil de acessar diretamente
+## SINAN Net's official data dictionary (TB) — hard to access directly
 
-**Status:** referência registrada, para não repetir o esforço de busca.
+**Status:** reference recorded, to avoid repeating the search effort.
 
-Confirmar campos codificados do SINAN-TB (`NDUPLIC_N`, `SITUA_ENCE`) contra a
-fonte primária (não texto indexado/resumo de busca) se mostrou repetidamente
-difícil neste projeto: tentativas de `WebFetch` direto em
-`portalsinan.saude.gov.br`, `sitetb.saude.gov.br` e um mirror da UFSC
-falharam (timeout, conexão recusada, ou PDF escaneado/binário sem texto
-extraível) em pelo menos 3 ocasiões distintas.
+Confirming SINAN-TB's coded fields (`NDUPLIC_N`, `SITUA_ENCE`) against the
+primary source (not indexed/summarized search text) proved repeatedly
+difficult in this project: direct `WebFetch` attempts against
+`portalsinan.saude.gov.br`, `sitetb.saude.gov.br`, and a UFSC mirror failed
+(timeout, connection refused, or a scanned/binary PDF with no extractable
+text) on at least 3 separate occasions.
 
-O documento que finalmente permitiu confirmação direta (campo 62, domínio
-completo de `SITUA_ENCE` com os 10 códigos) foi:
+The document that finally allowed direct confirmation (field 62, the
+complete `SITUA_ENCE` domain with all 10 codes) was:
 
-- **`DICI_DADOS_NET_Tuberculose_23_07_2020.pdf`** — dicionário de dados do
-  SINAN Net, versão da ficha 5.0, Ministério da Saúde.
-- Encontrado e lido diretamente pelo usuário do projeto (fora desta sessão);
-  a URL exata de onde foi baixado não foi capturada aqui — se disponível,
-  vale adicionar a este registro para acesso direto no futuro, em vez de
-  depender de busca novamente.
+- **`DICI_DADOS_NET_Tuberculose_23_07_2020.pdf`** — SINAN Net data dictionary,
+  form version 5.0, Ministry of Health.
+- Found and read directly by the project's owner (outside this session); the
+  exact URL it was downloaded from wasn't captured here — if available, it's
+  worth adding to this record for direct access in the future, instead of
+  relying on search again.
 
-Antes de assumir que um código de campo do SINAN não está documentado ou
-tentar decodificá-lo só por busca indexada, vale procurar especificamente
-por esse nome de arquivo (`DICI_DADOS_NET_*`) — é o padrão de nomenclatura
-oficial dos dicionários de dados por agravo do SINAN Net.
+Before assuming a SINAN field code is undocumented, or trying to decode it
+from indexed search alone, it's worth searching specifically for this
+filename pattern (`DICI_DADOS_NET_*`) — it's SINAN Net's official naming
+convention for per-condition data dictionaries.
 
-## SIM: sentinela `XX0000` em `CODMUNRES` = município de residência ignorado
+## SIM: `XX0000` sentinel in `CODMUNRES` = residence municipality not identified
 
-**Status:** identificado e tratado explicitamente em `transform_sim.py`, não descartado.
+**Status:** identified and handled explicitly in `transform_sim.py`, not dropped.
 
-### Contexto
+### Context
 
-`CODMUNRES` (município de residência do falecido, ver
-`docs/schema-reference-sim.md`) usa códigos de 6 dígitos (convenção DATASUS de
-omitir o dígito verificador do código IBGE de 7 dígitos). A validação empírica
-de correspondência contra `silver/dim_municipio` (`transform_sim.py
---validate-only`, amostra `uf=SP/ano=2022`) encontrou taxa de match de 99,5%
-(214 de 215 códigos únicos) — o único código sem correspondência foi
-`350000`.
+`CODMUNRES` (deceased's municipality of residence, see
+`docs/schema-reference-sim.md`) uses 6-digit codes (DATASUS's convention of
+omitting the check digit from the 7-digit IBGE code). Empirical validation
+against `silver/dim_municipio` (`transform_sim.py --validate-only`, sample
+`uf=SP/ano=2022`) found a 99.5% match rate (214 of 215 unique codes) — the
+one code with no match was `350000`.
 
-### Causa raiz
+### Root cause
 
-`XX0000` (código de UF de 2 dígitos + 4 zeros) é a convenção documentada do
-DATASUS/TABMUN para **"município de residência ignorado"**: o óbito é real e a
-UF é conhecida, mas o município de residência dentro daquela UF não foi
-identificado no preenchimento da Declaração de Óbito. Não é um município real
-e nunca vai ter correspondência em `dim_municipio` — isso é esperado, não um
-bug de join.
+`XX0000` (2-digit state code + 4 zeros) is DATASUS/TABMUN's documented
+convention for **"residence municipality not identified"**: the death is real
+and the state is known, but the municipality of residence within that state
+wasn't identified when the Death Certificate was filled out. It's not a real
+municipality and will never have a match in `dim_municipio` — this is
+expected, not a join bug.
 
-Na amostra `SP/2022`: 9 de 1.283 linhas (0,70%). Em escala nacional
-(2015-2024, todas as UFs): **266 de 40.205 linhas (0,66%)** — praticamente a
-mesma magnitude da amostra, confirmando que não é um artefato específico de
-SP.
+In the `SP/2022` sample: 9 of 1,283 rows (0.70%). At national scale
+(2015-2024, all states): **266 of 40,205 rows (0.66%)** — practically the
+same magnitude as the sample, confirming it isn't a São Paulo-specific
+artifact.
 
-### Tratamento aplicado
+### Applied treatment
 
-`normalize_municipio_code()` em `transform_sim.py` detecta o padrão via regex
-`^\d{2}0000$` e grava uma coluna explícita `municipio_residencia_ignorado`
-(booleana) no silver — **a linha é mantida**, não descartada: é um óbito
-verdadeiro, só com geografia de residência não resolvida; descartar
-subestimaria a mortalidade real. Qualquer agregação por município deve
-decidir explicitamente como tratar essas 266 linhas (ex.: excluir só da
-agregação geográfica, mas manter no total nacional), não ignorá-las
-silenciosamente.
+`normalize_municipio_code()` in `transform_sim.py` detects the pattern via
+the regex `^\d{2}0000$` and writes an explicit boolean column
+`municipio_residencia_ignorado` in silver — **the row is kept**, not dropped:
+it's a real death, just with unresolved residence geography; dropping it
+would understate real mortality. Any municipality-level aggregation must
+explicitly decide how to handle these 266 rows (e.g., excluding them only
+from geographic aggregation while keeping them in the national total), not
+silently ignore them.
 
-O log de qualidade (`quality/logs/bronze_to_silver_sim_last_run.json`, passo
-`normalize_municipio_code`) publica a contagem e o percentual a cada
-execução, para detectar se a magnitude muda em UFs ou anos futuros.
+The quality log (`quality/logs/bronze_to_silver_sim_last_run.json`,
+`normalize_municipio_code` step) publishes the count and percentage on every
+run, to detect whether the magnitude changes in future states or years.
 
-## SINAN-TB: `SG_UF='0'` — hipótese de sentinela, não confirmada (volume imaterial)
+## SINAN-TB: `SG_UF='0'` — sentinel hypothesis, not confirmed (immaterial volume)
 
-**Status:** filtrado explicitamente em `build_fct_taxa_abandono.py`
-(`aggregate_abandono_uf`), não investigado a fundo contra fonte primária.
+**Status:** filtered explicitly in `build_fct_taxa_abandono.py`
+(`aggregate_abandono_uf`), not investigated further against the primary source.
 
-`SG_UF='0'` aparece em 109 registros do SINAN-TB (2015: 50, 2016: 55, 2017: 4;
-ausente de 2018 em diante) — sem esse filtro, esses registros formavam uma
-28ª "UF" inválida no rollup `gold/fct_taxa_abandono_uf`, sem correspondência
-em `gold/dim_uf` (27 UFs reais).
+`SG_UF='0'` appears in 109 SINAN-TB records (2015: 50, 2016: 55, 2017: 4;
+absent from 2018 onward) — without this filter, these records formed an
+invalid 28th "state" in the `gold/fct_taxa_abandono_uf` rollup, with no match
+in `gold/dim_uf` (27 real states).
 
-Hipótese: mesmo padrão de sentinela de valor "ignorado/não informado" já
-confirmado em outras três fontes deste projeto (`SITUA_ENCE='0'` no SINAN-TB,
-`"..."` no IBGE/SIDRA, `CODMUNRES='XX0000'` no SIM). **Não confirmado contra o
-dicionário de dados oficial do SINAN** — decisão deliberada de não investigar,
-por desproporção entre esforço e ganho: volume é 0,012% do total de casos
-encerrados (109 de 911.257), mesmo raciocínio já aplicado para rejeitar a
-checagem do DOU de 2023 (ver ADR-003, alternativas rejeitadas). Se o volume
-crescer em execuções futuras, vale reabrir a investigação.
+Hypothesis: the same "ignored/not informed" sentinel pattern already
+confirmed in three other sources in this project (`SITUA_ENCE='0'` in
+SINAN-TB, `"..."` in IBGE/SIDRA, `CODMUNRES='XX0000'` in SIM). **Not
+confirmed against SINAN's official data dictionary** — a deliberate decision
+not to investigate, given the disproportion between effort and gain: volume
+is 0.012% of total closed cases (109 of 911,257), the same reasoning already
+applied to reject checking the 2023 Federal Gazette (see ADR-003, rejected
+alternatives). Worth reopening the investigation if the volume grows in
+future runs.
 
-## SINAN-TB: `ID_MN_RESI` sem correspondência em `dim_municipio` — 4ª instância do padrão de sentinela
+## SINAN-TB: `ID_MN_RESI` with no match in `dim_municipio` — 4th instance of the sentinel pattern
 
-**Status:** identificado ao adicionar `nome_municipio` em `build_fct_incidencia.py`
-(join com `silver/dim_municipio`), não filtrado — linhas mantidas, só sem nome
-exibível no dashboard.
+**Status:** identified while adding `nome_municipio` to `build_fct_incidencia.py`
+(join with `silver/dim_municipio`), not filtered — rows kept, just without a
+displayable name on the dashboard.
 
-31 registros (19 códigos `ID_MN_RESI` distintos, espalhados por vários anos)
-não têm correspondência em `dim_municipio` — as mesmas 31 linhas que já
-ficavam sem `populacao` (mesma tabela de referência derivada do IBGE por trás
-de ambos os joins).
+31 records (19 distinct `ID_MN_RESI` codes, spread across several years) have
+no match in `dim_municipio` — the same 31 rows that already lacked
+`populacao` (the same IBGE-derived reference table underlies both joins).
 
-17 dos 19 códigos seguem um padrão de sentinela reconhecível: `UF+0000` a
-`UF+0009` e `UF+99xxx` (ex.: `2400000`=RN, `5399068`=DF) — mesma semântica de
-"residência não identificada" já vista em três outras fontes deste projeto
-(`SITUA_ENCE='0'` no SINAN-TB, `"..."` no IBGE/SIDRA, `CODMUNRES='XX0000'` no
-SIM); nunca foram códigos IBGE reais, não é erro de join.
+17 of the 19 codes follow a recognizable sentinel pattern: `UF+0000` through
+`UF+0009` and `UF+99xxx` (e.g., `2400000`=RN, `5399068`=DF) — the same
+"residence not identified" semantics already seen in three other sources in
+this project (`SITUA_ENCE='0'` in SINAN-TB, `"..."` in IBGE/SIDRA,
+`CODMUNRES='XX0000'` in SIM); they were never real IBGE codes, this isn't a
+join error.
 
-2 dos 19 códigos (`5205604`, `5208202`, 1 caso cada) não se encaixam nesse
-padrão e permanecem sem explicação — não investigados além disso por volume
-imaterial (1 caso cada).
+2 of the 19 codes (`5205604`, `5208202`, 1 case each) don't fit this pattern
+and remain unexplained — not investigated further given immaterial volume (1
+case each).
 
-Volume máximo: 61 casos num único ano/código (`ID_MN_RESI='0'`, 2016); o
-restante é 1-3 casos por linha. Mesmo raciocínio de desproporção
-esforço/volume já aplicado ao `SG_UF='0'` acima.
+Maximum volume: 61 cases in a single year/code (`ID_MN_RESI='0'`, 2016); the
+rest is 1-3 cases per row. Same effort/volume disproportion reasoning already
+applied to `SG_UF='0'` above.
