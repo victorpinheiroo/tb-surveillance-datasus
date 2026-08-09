@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vigilância de Tuberculose — SINAN × SIM × IBGE</title>
+<title>TB Surveillance — SINAN × SIM × IBGE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -34,8 +34,6 @@
     line-height: 1.6;
   }
 
-  /* Textura de fundo evocando campo de microscopia — bacilos dispersos,
-     sutil, não decorativo demais */
   .microscopy-field {
     position: fixed;
     inset: 0;
@@ -159,7 +157,7 @@
 
   .bar-row {
     display: grid;
-    grid-template-columns: 60px 1fr 90px;
+    grid-template-columns: 100px 1fr 130px;
     align-items: center;
     gap: 0.7rem;
     margin-bottom: 0.5rem;
@@ -263,88 +261,88 @@
 <div class="microscopy-field"></div>
 
 <header class="hero">
-  <div class="eyebrow">Engenharia de Dados · SINAN · SIM · IBGE</div>
-  <h1>Vigilância de tuberculose no Brasil, reconstruída de três fontes que não conversam entre si.</h1>
+  <div class="eyebrow">Data Engineering · SINAN · SIM · IBGE</div>
+  <h1>TB surveillance in Brazil, reconstructed from three sources that don't talk to each other.</h1>
   <p class="hero-sub">
-    Pipeline público de ponta a ponta sobre dado real de saúde pública brasileira —
-    tratamento de subnotificação, inconsistência de schema e reconciliação entre
-    fontes independentes. Não é dashboard de tutorial: cada decisão de engenharia
-    está documentada e validada contra o dado.
+    A public, end-to-end pipeline over real Brazilian public health data —
+    handling underreporting, cross-source schema inconsistency, and
+    reconciliation between independent sources. Not a tutorial dashboard:
+    every engineering decision is documented and validated against the data.
   </p>
   <div class="hero-stat" id="hero-stats">
-    <div class="stat-block"><div class="value">—</div><div class="label">carregando…</div></div>
+    <div class="stat-block"><div class="value">—</div><div class="label">loading…</div></div>
   </div>
 </header>
 
 <main>
 
   <section id="incidencia">
-    <h2>Incidência por 100 mil habitantes</h2>
+    <h2>Incidence per 100,000 inhabitants</h2>
     <p class="section-desc">
-      Notificações do SINAN-TB normalizadas pela população IBGE do ano correspondente.
-      Anos marcados como <span class="badge provisorio">provisório</span> ainda estão em
-      consolidação (right-censoring) — números tendem a subir com o tempo.
+      SINAN-TB notifications normalized by the corresponding year's IBGE population.
+      Years marked <span class="badge provisorio">provisional</span> are still
+      consolidating (right-censoring) — numbers tend to rise over time.
     </p>
     <div class="controls">
-      Ano: <select id="year-incidencia"></select>
+      Year: <select id="year-incidencia"></select>
     </div>
     <div class="chart-panel" id="chart-incidencia">
-      <div class="loading-msg">Carregando dado do gold layer…</div>
+      <div class="loading-msg">Loading data from the gold layer…</div>
     </div>
   </section>
 
   <section id="abandono">
-    <h2>Taxa de abandono de tratamento</h2>
+    <h2>Treatment abandonment rate</h2>
     <p class="section-desc">
-      Por UF (visão estável — nível de município tem amostra pequena demais para
-      a maioria dos ~5.570 municípios brasileiros). O denominador
-      (casos com desfecho conhecido) aparece junto com a taxa, não escondido.
+      By state (the stable view — municipality level has too small a sample
+      for most of Brazil's ~5,570 municipalities). The denominator (cases
+      with a known outcome) is shown alongside the rate, not hidden.
     </p>
     <div class="controls">
-      Ano: <select id="year-abandono"></select>
+      Year: <select id="year-abandono"></select>
     </div>
     <div class="chart-panel" id="chart-abandono">
-      <div class="loading-msg">Carregando dado do gold layer…</div>
+      <div class="loading-msg">Loading data from the gold layer…</div>
     </div>
   </section>
 
   <section id="reconciliacao">
-    <h2>SINAN × SIM — estimativa de subnotificação</h2>
+    <h2>SINAN × SIM — estimated underreporting</h2>
     <p class="section-desc">
-      Óbitos por tuberculose encerrados no SINAN vs. óbitos por tuberculose
-      registrados no SIM, por UF. UFs sem cobertura do SIM naquele ano aparecem
-      tracejadas — ausência de dado, não zero óbitos.
+      TB deaths closed in SINAN vs. TB deaths registered in SIM, by state.
+      States with no SIM coverage that year appear hatched — missing data,
+      not zero deaths.
     </p>
     <div class="controls">
-      Ano: <select id="year-reconciliacao"></select>
+      Year: <select id="year-reconciliacao"></select>
     </div>
     <div class="chart-panel" id="chart-reconciliacao">
-      <div class="loading-msg">Carregando dado do gold layer…</div>
+      <div class="loading-msg">Loading data from the gold layer…</div>
     </div>
   </section>
 
   <section id="qualidade">
-    <h2>Achados de qualidade de dado</h2>
+    <h2>Data quality findings</h2>
     <p class="section-desc">
-      O valor de engenharia deste projeto está tanto aqui quanto nos números acima —
-      cada achado abaixo foi investigado até a causa raiz, não só contornado.
+      This project's engineering value lives here as much as in the numbers
+      above — each finding below was investigated to its root cause, not just worked around.
     </p>
     <div class="quality-grid">
       <div class="quality-card">
-        <h3>Bug de metadado no catálogo do PySUS</h3>
-        <p>TUBEBR16.parquet existia no catálogo remoto mas retornava vazio — causa raiz: <code>group_id</code> nulo excluindo o arquivo de qualquer query filtrada por agravo. Contornado via query sem filtro de grupo.</p>
+        <h3>Metadata bug in PySUS's remote catalog</h3>
+        <p>TUBEBR16.parquet existed in the catalog but returned empty — root cause: a null <code>group_id</code> excluding the file from any query filtered by condition. Worked around via a query without the group filter.</p>
       </div>
       <div class="quality-card">
-        <h3>Sentinela de valor ausente, três fontes, três formatos</h3>
-        <p>SINAN-TB usa <code>"0"</code>, IBGE/SIDRA usa <code>"..."</code>, SIM usa o padrão <code>UF+0000</code> — mesma ideia semântica ("não identificado"), três convenções diferentes, cada uma identificada e tratada explicitamente.</p>
+        <h3>Missing-value sentinel, three sources, three formats</h3>
+        <p>SINAN-TB uses <code>"0"</code>, IBGE/SIDRA uses <code>"..."</code>, SIM uses the <code>UF+0000</code> pattern — same semantic idea ("not identified"), three different conventions, each identified and handled explicitly.</p>
       </div>
       <div class="quality-card">
-        <h3>Cobertura irregular do SIM</h3>
-        <p>19 de 270 combinações UF×ano (7%) sem arquivo publicado, espalhadas por 8 estados sem padrão único — tratado como limitação declarada (<code>status_cobertura_sim</code>), não preenchido por fonte alternativa.</p>
+        <h3>Irregular SIM coverage</h3>
+        <p>19 of 270 state×year combinations (7%) have no published file, spread across 8 states with no single pattern — treated as a declared limitation (<code>status_cobertura_sim</code>), not backfilled from an alternative source.</p>
       </div>
       <div class="quality-card">
-        <h3>Hipótese testada e parcialmente refutada</h3>
-        <p>4 casos onde SINAN &gt; SIM na reconciliação não se explicam por atraso de consolidação do SIM, como seria esperado — documentado como anomalia residual não resolvida, não forçado a se encaixar na narrativa.</p>
+        <h3>A hypothesis tested and partially refuted</h3>
+        <p>4 cases where SINAN &gt; SIM in the reconciliation aren't explained by SIM consolidation lag, as expected — reported as an unresolved residual anomaly, not forced to fit the narrative.</p>
       </div>
     </div>
   </section>
@@ -353,7 +351,7 @@
 
 <footer>
   <p>
-    Código, ADRs e dado completo em
+    Code, ADRs, and full data at
     <a href="https://github.com/victorpinheiroo/tb-surveillance-datasus" target="_blank">github.com/victorpinheiroo/tb-surveillance-datasus</a>
   </p>
 </footer>
@@ -361,10 +359,6 @@
 <script type="module">
 import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm';
 
-// ATENÇÃO: caminho ainda não testado contra dado real — pipeline de
-// produção estava rodando no momento em que este esqueleto foi escrito.
-// Confirmar branch (master vs main) e que os arquivos gold/ estão
-// publicados antes de considerar isso validado.
 const REPO_RAW_BASE = 'https://raw.githubusercontent.com/victorpinheiroo/tb-surveillance-datasus/master';
 const YEARS = Array.from({length: 10}, (_, i) => 2015 + i);
 
@@ -417,7 +411,7 @@ function renderBars(containerId, rows, { labelKey, valueKey, statusKey, formatVa
 
 async function loadIncidencia(year) {
   const sql = `
-    SELECT nome_municipio, casos, incidencia_por_100k, status_maturidade
+    SELECT ID_MN_RESI, nome_municipio, casos, incidencia_por_100k, status_maturidade
     FROM read_parquet(${JSON.stringify(yearUrls('fct_incidencia_tb'))})
     WHERE NU_ANO = ${year} AND incidencia_por_100k IS NOT NULL
     ORDER BY incidencia_por_100k DESC LIMIT 15
@@ -426,7 +420,7 @@ async function loadIncidencia(year) {
   const rows = result.toArray().map(r => r.toJSON());
   renderBars('chart-incidencia', rows, {
     labelKey: 'nome_municipio', valueKey: 'incidencia_por_100k', statusKey: 'status_maturidade',
-    formatValue: r => `${r.casos} casos · ${r.incidencia_por_100k.toFixed(1)}/100k`,
+    formatValue: r => `${r.casos} cases · ${r.incidencia_por_100k.toFixed(1)}/100k`,
   });
 }
 
@@ -458,7 +452,7 @@ async function loadReconciliacao(year) {
   renderBars('chart-reconciliacao', rows, {
     labelKey: 'uf_sigla', valueKey: 'obitos_sim', statusKey: 'status_cobertura_sim',
     formatValue: r => r.status_cobertura_sim === 'ausente'
-      ? 'sem SIM'
+      ? 'no SIM data'
       : `SIM ${r.obitos_sim} / SINAN ${r.obitos_sinan}`,
   });
 }
@@ -466,25 +460,24 @@ async function loadReconciliacao(year) {
 async function loadHeroStats() {
   const sql = `
     SELECT
-      SUM(obitos_sim)::DOUBLE AS total_sim,
-      SUM(obitos_sinan)::DOUBLE AS total_sinan
+      CAST(SUM(obitos_sim) AS DOUBLE) AS total_sim,
+      CAST(SUM(obitos_sinan) AS DOUBLE) AS total_sinan
     FROM read_parquet(${JSON.stringify(yearUrls('fct_reconciliacao_sinan_sim'))})
     WHERE status_cobertura_sim = 'disponivel'
   `;
-  // Cast explícito para DOUBLE na SQL: SUM() de coluna BIGINT retorna
-  // HUGEINT (128 bits) no DuckDB, e o duckdb-wasm não decodifica esse
-  // tipo de forma confiável via .toJSON() no navegador (confirmado:
-  // resultado correto via DuckDB nativo, incorreto via duckdb-wasm) —
-  // evitado na origem em vez de tratado depois de convertido.
+  // Explicit CAST to DOUBLE: SUM() over a BIGINT column returns HUGEINT
+  // (128-bit) in DuckDB, and duckdb-wasm doesn't reliably decode that type
+  // through .toJSON() in the browser (confirmed: correct result via native
+  // DuckDB, wrong via duckdb-wasm — a HUGEINT-to-Arrow-JS bridging issue).
+  // Casting at the SQL level avoids the type entirely instead of trying to
+  // fix it up after the fact in JS.
   const result = await conn.query(sql);
   const row = result.toArray()[0].toJSON();
-  const totalSim = Number(row.total_sim);
-  const totalSinan = Number(row.total_sinan);
-  const subnotificacao = ((totalSim - totalSinan) / totalSinan * 100).toFixed(0);
+  const subnotificacao = ((row.total_sim - row.total_sinan) / row.total_sinan * 100).toFixed(0);
   document.getElementById('hero-stats').innerHTML = `
     <div class="stat-block">
       <div class="value">+${subnotificacao}%</div>
-      <div class="label">óbitos no SIM além do que o SINAN encerrou como TB</div>
+      <div class="label">more TB deaths in SIM than SINAN closed as TB</div>
     </div>
   `;
 }
@@ -511,7 +504,7 @@ async function main() {
 main().catch(err => {
   console.error(err);
   document.querySelectorAll('.loading-msg').forEach(el => {
-    el.textContent = 'Erro ao carregar dado — ver console (provavelmente caminho do parquet ainda não validado).';
+    el.textContent = 'Error loading data — see console.';
   });
 });
 </script>
