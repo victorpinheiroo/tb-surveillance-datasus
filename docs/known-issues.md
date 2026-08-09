@@ -168,3 +168,49 @@ case each).
 Maximum volume: 61 cases in a single year/code (`ID_MN_RESI='0'`, 2016); the
 rest is 1-3 cases per row. Same effort/volume disproportion reasoning already
 applied to `SG_UF='0'` above.
+
+## External validation against the official TB Epidemiological Bulletin (2023 data) — order of magnitude confirmed, residual gap documented
+
+**Status:** sanity check performed in a throwaway script (not committed to the
+pipeline), documented here as a finding — no production code changed.
+
+Compared `gold/fct_incidencia_tb/ano=2023/` against Brazil's official 2023 TB
+incidence figures, published in the **Boletim Epidemiológico de Tuberculose
+2024** (Ministério da Saúde, Secretaria de Vigilância em Saúde e Ambiente —
+data year 2023; exact URL not captured, cite by title/publisher/year if
+retrieving again):
+
+| Scope | Official (2024 Bulletin) | `fct_incidencia_tb`, no filter | `TRATAMENTO='1'` only | Residual gap |
+|---|---:|---:|---:|---:|
+| National | 37.3/100k | 55.9/100k | 42.8/100k | +14.7% |
+| SP | 42.0/100k | 56.6/100k | 44.7/100k | +6.4% |
+| RJ | 70.7/100k | 105.7/100k | 78.9/100k | +11.6% |
+| AM | 81.6/100k | 125.1/100k | 95.9/100k | +17.5% |
+| BA | 25.9/100k | 40.7/100k | 31.6/100k | +22.0% |
+
+`fct_incidencia_tb` as it stands today has no filter on entry type
+(`TRATAMENTO`), so it counts every notification — new cases, retreatment,
+relapse, etc. — against the official metric, which counts new cases only.
+That alone explains most of the ~50% national overestimate: filtering
+`silver/stg_sinan__tuberculose` to `TRATAMENTO='1'` (new case) before
+aggregating brings every scope much closer to the official number.
+
+A residual gap remains after that filter, and it is **not uniform across
+states** (+6.4% in SP vs. +22.0% in BA) — if this were purely a case-definition
+difference, a roughly constant offset would be expected instead. The
+population-denominator hypothesis was tested and not sustained: the 2024
+Bulletin uses the same 2022 Census base for its 2023 estimate that this
+project uses (per IBGE's own published methodology note), so the two sources
+aren't drawing from different population baselines. The more likely
+explanation is a difference in extraction maturity: the Bulletin's 2023
+figures were extracted in February 2024 as preliminary data, while this
+project's SINAN-TB extraction happened in 2026 — about 2.5 years more
+consolidated, plausibly picking up late notifications the Bulletin's earlier
+snapshot didn't yet have. Not confirmed against a primary source, and not
+investigated further beyond this point — same effort/volume disproportion
+reasoning already applied to the other residual anomalies in this document.
+
+**Decision:** `fct_incidencia_tb` is not changed to filter by `TRATAMENTO='1'`
+by default. Restricting the metric to new cases only would be a scope change
+to what the metric measures (a product decision), not a bug fix — kept as an
+observation here, not treated as a required correction.
