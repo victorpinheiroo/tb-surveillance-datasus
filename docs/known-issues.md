@@ -143,3 +143,28 @@ por desproporção entre esforço e ganho: volume é 0,012% do total de casos
 encerrados (109 de 911.257), mesmo raciocínio já aplicado para rejeitar a
 checagem do DOU de 2023 (ver ADR-003, alternativas rejeitadas). Se o volume
 crescer em execuções futuras, vale reabrir a investigação.
+
+## SINAN-TB: `ID_MN_RESI` sem correspondência em `dim_municipio` — 4ª instância do padrão de sentinela
+
+**Status:** identificado ao adicionar `nome_municipio` em `build_fct_incidencia.py`
+(join com `silver/dim_municipio`), não filtrado — linhas mantidas, só sem nome
+exibível no dashboard.
+
+31 registros (19 códigos `ID_MN_RESI` distintos, espalhados por vários anos)
+não têm correspondência em `dim_municipio` — as mesmas 31 linhas que já
+ficavam sem `populacao` (mesma tabela de referência derivada do IBGE por trás
+de ambos os joins).
+
+17 dos 19 códigos seguem um padrão de sentinela reconhecível: `UF+0000` a
+`UF+0009` e `UF+99xxx` (ex.: `2400000`=RN, `5399068`=DF) — mesma semântica de
+"residência não identificada" já vista em três outras fontes deste projeto
+(`SITUA_ENCE='0'` no SINAN-TB, `"..."` no IBGE/SIDRA, `CODMUNRES='XX0000'` no
+SIM); nunca foram códigos IBGE reais, não é erro de join.
+
+2 dos 19 códigos (`5205604`, `5208202`, 1 caso cada) não se encaixam nesse
+padrão e permanecem sem explicação — não investigados além disso por volume
+imaterial (1 caso cada).
+
+Volume máximo: 61 casos num único ano/código (`ID_MN_RESI='0'`, 2016); o
+restante é 1-3 casos por linha. Mesmo raciocínio de desproporção
+esforço/volume já aplicado ao `SG_UF='0'` acima.

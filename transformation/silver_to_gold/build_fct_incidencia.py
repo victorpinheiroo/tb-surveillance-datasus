@@ -29,7 +29,12 @@ from quality_report import QualityLog
 
 SILVER_SINAN = Path("silver/stg_sinan__tuberculose")
 SILVER_POPULATION = Path("silver/stg_ibge__populacao_municipio")
+DIM_MUNICIPIO = Path("silver/dim_municipio/data.parquet")
 GOLD_ROOT = Path("gold/fct_incidencia_tb")
+
+
+def load_dim_municipio() -> pd.DataFrame:
+    return pd.read_parquet(DIM_MUNICIPIO)
 
 
 def load_silver_sinan(years) -> pd.DataFrame:
@@ -80,6 +85,23 @@ def join_population(agg: pd.DataFrame, pop: pd.DataFrame, log: QualityLog) -> pd
     return df
 
 
+def join_municipio_nome(df: pd.DataFrame, dim_municipio: pd.DataFrame, log: QualityLog) -> pd.DataFrame:
+    """Traz nome_municipio via join com dim_municipio (mesmo padrão de
+    uf_sigla em build_fct_taxa_abandono.py) — código IBGE cru não é
+    legível no dashboard; ID_MN_RESI é mantido, não removido."""
+    before = len(df)
+    df = df.merge(
+        dim_municipio[["codigo_municipio", "nome_municipio"]],
+        left_on="ID_MN_RESI", right_on="codigo_municipio", how="left",
+    )
+    df = df.drop(columns=["codigo_municipio"])
+    sem_nome = df["nome_municipio"].isna().sum()
+    log.record("join_municipio_nome", before, len(df), {
+        "linhas_sem_nome_municipio": int(sem_nome),
+    })
+    return df
+
+
 def write_gold(df: pd.DataFrame, years):
     for year in years:
         year_df = df[df["NU_ANO"] == year]
@@ -102,10 +124,12 @@ def main():
     print("Carregando silver...")
     sinan = load_silver_sinan(args.years)
     pop = load_silver_population(args.years)
-    log.record("load_silver", 0, len(sinan), {"populacao_linhas": len(pop)})
+    dim_municipio = load_dim_municipio()
+    log.record("load_silver", 0, len(sinan), {"populacao_linhas": len(pop), "dim_municipio_linhas": len(dim_municipio)})
 
     agg = aggregate_casos(sinan, log)
     result = join_population(agg, pop, log)
+    result = join_municipio_nome(result, dim_municipio, log)
 
     print("\nGravando gold...")
     write_gold(result, args.years)

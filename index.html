@@ -417,7 +417,7 @@ function renderBars(containerId, rows, { labelKey, valueKey, statusKey, formatVa
 
 async function loadIncidencia(year) {
   const sql = `
-    SELECT ID_MN_RESI, casos, incidencia_por_100k, status_maturidade
+    SELECT nome_municipio, casos, incidencia_por_100k, status_maturidade
     FROM read_parquet(${JSON.stringify(yearUrls('fct_incidencia_tb'))})
     WHERE NU_ANO = ${year} AND incidencia_por_100k IS NOT NULL
     ORDER BY incidencia_por_100k DESC LIMIT 15
@@ -425,8 +425,8 @@ async function loadIncidencia(year) {
   const result = await conn.query(sql);
   const rows = result.toArray().map(r => r.toJSON());
   renderBars('chart-incidencia', rows, {
-    labelKey: 'ID_MN_RESI', valueKey: 'incidencia_por_100k', statusKey: 'status_maturidade',
-    formatValue: r => `${r.incidencia_por_100k.toFixed(1)}/100k`,
+    labelKey: 'nome_municipio', valueKey: 'incidencia_por_100k', statusKey: 'status_maturidade',
+    formatValue: r => `${r.casos} casos · ${r.incidencia_por_100k.toFixed(1)}/100k`,
   });
 }
 
