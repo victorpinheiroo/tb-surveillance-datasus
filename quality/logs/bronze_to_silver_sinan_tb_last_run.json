@@ -1,7 +1,7 @@
 {
   "pipeline_name": "bronze_to_silver_sinan_tb",
-  "started_at": "2026-08-03T03:47:10.548652+00:00",
-  "completed_at": "2026-08-03T03:47:27.510045+00:00",
+  "started_at": "2026-08-08T21:08:45.694030+00:00",
+  "completed_at": "2026-08-08T21:09:01.390726+00:00",
   "steps": [
     {
       "step": "load_bronze_years",
