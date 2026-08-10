@@ -96,6 +96,8 @@ infra/                    # IaC Azure (demonstração pontual)
 - 7% das combinações UF×ano do SIM não têm dado disponível na fonte (não preenchido por fonte alternativa — ver ADR-001).
 - Taxa de abandono em nível de município é estatisticamente instável para ~90% dos municípios (amostra pequena); visão de UF é a recomendada.
 - 4 casos residuais na reconciliação SINAN×SIM permanecem sem explicação completa.
+- `requirements.txt` não fixa versões exatas (só `pysus>=2.0`) — uma lacuna de reprodutibilidade. Se uma versão futura do PySUS mudar o comportamento do metadado do catálogo (como já aconteceu uma vez, ver `docs/known-issues.md`), o pipeline pode funcionar hoje e quebrar silenciosamente pra quem clonar o repo depois. Ainda não fixado; vale fazer via `pip freeze` contra o ambiente validado.
+- Não há suite de testes automatizados (ex.: `pytest`). Os logs de qualidade validam o *dado* a cada execução, mas a lógica central — decodificação de `SITUA_ENCE`, regex do sentinela `XX0000`, parser de data — não tem teste unitário. Uma lacuna real pra um projeto de nível sênior, deixada honesta aqui em vez de implícita como coberta.
 
 ---
 

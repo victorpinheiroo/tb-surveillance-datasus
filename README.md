@@ -94,6 +94,8 @@ infra/                    # Azure IaC (one-time demonstration)
 - 7% of SIM state×year combinations have no data available from the source (not backfilled from an alternative source — see ADR-001).
 - Municipality-level abandonment rate is statistically unstable for ~90% of municipalities (small sample); state-level is the recommended view.
 - 4 residual cases in the SINAN×SIM reconciliation remain without a complete explanation.
+- `requirements.txt` pins no exact versions (only `pysus>=2.0`) — a reproducibility gap. If a future PySUS release changes catalog metadata behavior (as already happened once, see `docs/known-issues.md`), the pipeline could work today and break silently for anyone cloning the repo later. Not pinned yet; worth doing via `pip freeze` against the validated environment.
+- No automated test suite (e.g. `pytest`). Quality logs validate the *data* on every run, but core logic — `SITUA_ENCE` decoding, the `XX0000` sentinel regex, date parsing — has no unit tests. A real gap for a senior-level project, left honest here rather than implied as covered.
 
 ---
 
