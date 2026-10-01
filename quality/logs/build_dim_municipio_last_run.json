@@ -1,7 +1,7 @@
 {
   "pipeline_name": "build_dim_municipio_scd2",
-  "started_at": "2026-08-08T21:09:02.695988+00:00",
-  "completed_at": "2026-08-08T21:09:07.139207+00:00",
+  "started_at": "2026-10-01T12:50:28.009189+00:00",
+  "completed_at": "2026-10-01T12:50:32.262075+00:00",
   "steps": [
     {
       "step": "load_population_silver",

@@ -1,6 +1,6 @@
 source=PySUS sim(state='MA', year=2023)
 filter=CAUSABAS startswith ('A15', 'A16', 'A17', 'A18', 'A19')
-ingested_at=2026-08-08T21:00:40.714974+00:00
-rows_total_source=38747
-rows_filtered_tb=240
-checksum_sha256_16=75c872ff6e52b475
+ingested_at=2026-10-01T12:41:55.765147+00:00
+rows_total_source=1504357
+rows_filtered_tb=6265
+checksum_sha256_16=5a0cacc87ceb715e

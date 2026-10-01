@@ -1,6 +1,6 @@
 source=PySUS sinan(disease='tube', year=2016)
-ingested_at=2026-08-08T20:36:23.610716+00:00
+ingested_at=2026-10-01T11:59:26.742177+00:00
 rows=86210
 columns=100
-checksum_sha256_16=62357ce664598259
+checksum_sha256_16=60c3c435420292c4
 extraction_method=fallback_no_group_filter

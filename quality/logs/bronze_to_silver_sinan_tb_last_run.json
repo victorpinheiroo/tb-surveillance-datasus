@@ -1,19 +1,19 @@
 {
   "pipeline_name": "bronze_to_silver_sinan_tb",
-  "started_at": "2026-08-08T21:08:45.694030+00:00",
-  "completed_at": "2026-08-08T21:09:01.390726+00:00",
+  "started_at": "2026-10-01T12:50:11.299343+00:00",
+  "completed_at": "2026-10-01T12:50:26.823156+00:00",
   "steps": [
     {
       "step": "load_bronze_years",
       "rows_before": 0,
-      "rows_after": 955995,
-      "rows_changed": -955995,
+      "rows_after": 956439,
+      "rows_changed": -956439,
       "detail": {}
     },
     {
       "step": "drop_legacy_2015_columns",
-      "rows_before": 955995,
-      "rows_after": 955995,
+      "rows_before": 956439,
+      "rows_after": 956439,
       "rows_changed": 0,
       "detail": {
         "AGRAVOUTDE_valores_descartados": 23922,
@@ -23,8 +23,8 @@
     },
     {
       "step": "cast_types",
-      "rows_before": 955995,
-      "rows_after": 955995,
+      "rows_before": 956439,
+      "rows_after": 956439,
       "rows_changed": 0,
       "detail": {
         "date_columns_cast": 13
@@ -32,8 +32,8 @@
     },
     {
       "step": "decode_situa_ence",
-      "rows_before": 955995,
-      "rows_after": 955995,
+      "rows_before": 956439,
+      "rows_after": 956439,
       "rows_changed": 0,
       "detail": {
         "codigos_nao_mapeados": 8358,
@@ -44,12 +44,12 @@
     },
     {
       "step": "deduplicate",
-      "rows_before": 955995,
-      "rows_after": 955937,
-      "rows_changed": 58,
+      "rows_before": 956439,
+      "rows_after": 956373,
+      "rows_changed": 66,
       "detail": {
-        "ndupli_n_2_removidos": 58,
-        "pct_colisao_quase_identificador_diagnostico": "6.67%"
+        "ndupli_n_2_removidos": 66,
+        "pct_colisao_quase_identificador_diagnostico": "6.66%"
       }
     },
     {
@@ -74,11 +74,11 @@
     },
     {
       "step": "join_population",
-      "rows_before": 955937,
-      "rows_after": 955937,
+      "rows_before": 956373,
+      "rows_after": 956373,
       "rows_changed": 0,
       "detail": {
-        "linhas_sem_populacao_correspondente": 5061,
+        "linhas_sem_populacao_correspondente": 5707,
         "nota": "população nula é esperada e válida (ex.: Boa Esperança do Norte 2022-2023, ADR-003); não descartar linha por isso"
       }
     }

@@ -1,31 +1,31 @@
 {
   "pipeline_name": "gold_fct_taxa_abandono",
-  "started_at": "2026-08-09T04:52:12.047425+00:00",
-  "completed_at": "2026-08-09T04:52:20.106229+00:00",
+  "started_at": "2026-10-01T12:50:51.139809+00:00",
+  "completed_at": "2026-10-01T12:50:55.081846+00:00",
   "steps": [
     {
       "step": "load_silver",
       "rows_before": 0,
-      "rows_after": 951035,
-      "rows_changed": -951035,
+      "rows_after": 950825,
+      "rows_changed": -950825,
       "detail": {
         "dim_uf_linhas": 27
       }
     },
     {
       "step": "filter_encerrados",
-      "rows_before": 951035,
-      "rows_after": 911257,
-      "rows_changed": 39778,
+      "rows_before": 950825,
+      "rows_after": 921227,
+      "rows_changed": 29598,
       "detail": {
         "nota": "denominador é só casos com desfecho conhecido, não o total de notificações"
       }
     },
     {
       "step": "aggregate_abandono",
-      "rows_before": 911257,
-      "rows_after": 39710,
-      "rows_changed": 871547,
+      "rows_before": 921227,
+      "rows_after": 39834,
+      "rows_changed": 881393,
       "detail": {
         "granularidade": "municipio x ano",
         "categorias_numerador": [
@@ -36,9 +36,9 @@
     },
     {
       "step": "aggregate_abandono_uf",
-      "rows_before": 911257,
+      "rows_before": 921227,
       "rows_after": 270,
-      "rows_changed": 910987,
+      "rows_changed": 920957,
       "detail": {
         "granularidade": "UF x ano",
         "linhas_uf_invalida_excluidas": 109,

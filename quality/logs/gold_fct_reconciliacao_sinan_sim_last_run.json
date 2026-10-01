@@ -1,23 +1,23 @@
 {
   "pipeline_name": "gold_fct_reconciliacao_sinan_sim",
-  "started_at": "2026-08-08T21:09:18.180153+00:00",
-  "completed_at": "2026-08-08T21:09:20.543014+00:00",
+  "started_at": "2026-10-01T12:50:55.642117+00:00",
+  "completed_at": "2026-10-01T12:51:00.178484+00:00",
   "steps": [
     {
       "step": "load_silver",
       "rows_before": 0,
-      "rows_after": 951035,
-      "rows_changed": -951035,
+      "rows_after": 950825,
+      "rows_changed": -950825,
       "detail": {
-        "sim_linhas": 40205,
+        "sim_linhas": 1419740,
         "dim_uf_linhas": 27
       }
     },
     {
       "step": "aggregate_sinan_obitos",
-      "rows_before": 951035,
+      "rows_before": 950825,
       "rows_after": 270,
-      "rows_changed": 950765,
+      "rows_changed": 950555,
       "detail": {
         "filtro": "situacao_encerramento_desc == 'Óbito por Tuberculose'",
         "linhas_uf_invalida_excluidas": 4
@@ -25,9 +25,9 @@
     },
     {
       "step": "aggregate_sim_obitos",
-      "rows_before": 40205,
-      "rows_after": 251,
-      "rows_changed": 39954,
+      "rows_before": 1419740,
+      "rows_after": 270,
+      "rows_changed": 1419470,
       "detail": {}
     },
     {
@@ -36,7 +36,7 @@
       "rows_after": 270,
       "rows_changed": -270,
       "detail": {
-        "combinacoes_uf_ano_ausentes": 19
+        "combinacoes_uf_ano_ausentes": 0
       }
     },
     {
@@ -45,7 +45,7 @@
       "rows_after": 270,
       "rows_changed": 0,
       "detail": {
-        "linhas_sem_cobertura_sim": 19,
+        "linhas_sem_cobertura_sim": 0,
         "nota": "diferenca_sim_menos_sinan é nula (não zero) onde status_cobertura_sim='ausente'"
       }
     }
