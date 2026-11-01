@@ -1,7 +1,7 @@
 {
   "pipeline_name": "gold_fct_taxa_abandono",
-  "started_at": "2026-10-01T12:50:51.139809+00:00",
-  "completed_at": "2026-10-01T12:50:55.081846+00:00",
+  "started_at": "2026-11-01T13:08:54.069386+00:00",
+  "completed_at": "2026-11-01T13:08:57.923966+00:00",
   "steps": [
     {
       "step": "load_silver",

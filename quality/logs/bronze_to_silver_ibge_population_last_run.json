@@ -1,7 +1,7 @@
 {
   "pipeline_name": "bronze_to_silver_ibge_population",
-  "started_at": "2026-10-01T12:50:27.321664+00:00",
-  "completed_at": "2026-10-01T12:50:27.593766+00:00",
+  "started_at": "2026-11-01T13:08:17.166582+00:00",
+  "completed_at": "2026-11-01T13:08:17.419230+00:00",
   "steps": [
     {
       "step": "load_bronze_years",

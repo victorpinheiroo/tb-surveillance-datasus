@@ -1,7 +1,7 @@
 {
   "pipeline_name": "bronze_to_silver_sim",
-  "started_at": "2026-10-01T12:50:32.677714+00:00",
-  "completed_at": "2026-10-01T12:50:47.255411+00:00",
+  "started_at": "2026-11-01T13:08:22.397870+00:00",
+  "completed_at": "2026-11-01T13:08:50.151607+00:00",
   "steps": [
     {
       "step": "load_bronze",

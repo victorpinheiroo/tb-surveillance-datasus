@@ -1,5 +1,5 @@
 source=IBGE-SIDRA-6579-2024
 status_fonte_populacao=estimativa_direta
-ingested_at=2026-10-01T12:50:10.833307+00:00
+ingested_at=2026-11-01T13:08:00.782802+00:00
 rows=5572
-checksum_sha256_16=4c4ab44b71deddf6
+checksum_sha256_16=31b9a06a86d86816
