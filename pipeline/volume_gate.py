@@ -111,6 +111,26 @@ def report(violations: list[str], max_relative_change: float) -> bool:
     return False
 
 
+DECISION_FILE = LOG_DIR / "volume_gate_decision.json"  # fora do glob *_last_run.json
+
+
+def write_decision(repo_root: Path, violations: list[str], max_relative_change: float,
+                   status: str, reason: str | None) -> None:
+    """Registro durável de cada decisão do gate — inclusive de cada override e
+    sua justificativa — versionado junto com o dado que ele liberou."""
+    from datetime import datetime, timezone
+    payload = {
+        "decided_at": datetime.now(timezone.utc).isoformat(),
+        "status": status,  # aprovado | override | reprovado
+        "max_relative_change": max_relative_change,
+        "violations": violations,
+        "override_reason": reason,
+    }
+    path = repo_root / DECISION_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compara volumes de quality logs entre dois commits")
     parser.add_argument("--from-ref", required=True)

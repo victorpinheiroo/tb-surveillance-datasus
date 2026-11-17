@@ -11,7 +11,20 @@ on:
     # muda em escala de dias; mensal é suficiente para capturar
     # consolidação de casos sem gastar minutos de execução à toa.
     - cron: "0 6 1 * *"
-  workflow_dispatch: {}  # permite rodar manualmente pela aba Actions
+  workflow_dispatch:  # permite rodar manualmente pela aba Actions
+    inputs:
+      # Override do volume_gate — só existe no gatilho manual; execuções
+      # agendadas nunca o recebem. Desliga SÓ o gate de volume: as guardas
+      # de catálogo, residência e duplicidade rodam dentro dos estágios e
+      # não têm override.
+      accept_volume_change:
+        description: "Aceitar variação de volume acima do limite (exige justificativa)"
+        type: boolean
+        default: false
+      volume_change_reason:
+        description: "Justificativa (obrigatória se o override estiver ligado) — vai para o log e para a mensagem do commit"
+        type: string
+        default: ""
 
 # Nota (2026-08-03): valor original de 45min foi estimativa não validada
 # e causou cancelamento automático no meio da execução real (SIM sozinho,
@@ -46,15 +59,30 @@ jobs:
       - name: Rodar pipeline completo (bronze -> silver -> gold)
         env:
           PYTHONUNBUFFERED: "1"
-        run: python pipeline/run_pipeline.py --stage all
+          # Texto livre do usuário via env, nunca interpolado direto no script.
+          ACCEPT: ${{ github.event_name == 'workflow_dispatch' && inputs.accept_volume_change }}
+          REASON: ${{ github.event_name == 'workflow_dispatch' && inputs.volume_change_reason || '' }}
+        run: |
+          if [ "$ACCEPT" = "true" ]; then
+            python pipeline/run_pipeline.py --stage all --accept-volume-change --volume-change-reason "$REASON"
+          else
+            python pipeline/run_pipeline.py --stage all
+          fi
 
       - name: Commit e push dos artefatos atualizados
+        env:
+          ACCEPT: ${{ github.event_name == 'workflow_dispatch' && inputs.accept_volume_change }}
+          REASON: ${{ github.event_name == 'workflow_dispatch' && inputs.volume_change_reason || '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add bronze/ silver/ gold/ quality/logs/
           git diff --staged --quiet && echo "Nenhuma mudança de dado — nada a commitar." && exit 0
-          git commit -m "Automated pipeline run: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          MSG="Automated pipeline run: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          if [ "$ACCEPT" = "true" ] && grep -q '"status": "override"' quality/logs/volume_gate_decision.json; then
+            MSG="$MSG [volume_gate override]"$'\n\n'"Volume change accepted manually. Reason: $REASON"
+          fi
+          git commit -m "$MSG"
           git push
 
       # Incidente 2026-10: um gate que bloqueia o commit protege o dashboard,

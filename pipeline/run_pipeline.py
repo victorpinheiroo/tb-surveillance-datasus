@@ -92,12 +92,23 @@ def main():
     parser.add_argument("--stage", choices=["bronze", "silver", "gold", "all"], default="all")
     parser.add_argument(
         "--accept-volume-change", action="store_true",
-        help="Não reprovar pelo volume_gate (mudança de volume intencional e documentada).",
+        help="Não reprovar pelo volume_gate (mudança de volume intencional e documentada). "
+             "Desliga SÓ o gate de volume — as guardas de catálogo, residência e duplicidade "
+             "rodam dentro dos estágios e continuam valendo sempre. Exige --volume-change-reason.",
+    )
+    parser.add_argument(
+        "--volume-change-reason", type=str, default="",
+        help="Justificativa obrigatória com --accept-volume-change; gravada no log e em "
+             "quality/logs/volume_gate_decision.json.",
     )
     parser.add_argument(
         "--max-relative-change", type=float, default=volume_gate.DEFAULT_MAX_RELATIVE_CHANGE,
     )
     args = parser.parse_args()
+
+    # Falha ANTES de rodar ~50min de pipeline, não no final.
+    if args.accept_volume_change and not args.volume_change_reason.strip():
+        parser.error("--accept-volume-change exige --volume-change-reason com a justificativa.")
 
     # Snapshot ANTES de rodar: os scripts sobrescrevem os *_last_run.json.
     previous_logs = volume_gate.snapshot(REPO_ROOT)
@@ -117,12 +128,19 @@ def main():
     violations = volume_gate.compare(
         previous_logs, volume_gate.snapshot(REPO_ROOT), args.max_relative_change,
     )
-    if not volume_gate.report(violations, args.max_relative_change):
-        if args.accept_volume_change:
-            print("    --accept-volume-change informado: seguindo mesmo assim.")
-        else:
-            # exit != 0 -> o workflow não chega no passo de commit/push.
-            sys.exit(1)
+    approved = volume_gate.report(violations, args.max_relative_change)
+    overridden = not approved and args.accept_volume_change
+    if overridden:
+        print(f"    --accept-volume-change informado: seguindo mesmo assim.\n"
+              f"    Justificativa: {args.volume_change_reason.strip()}")
+    volume_gate.write_decision(
+        REPO_ROOT, violations, args.max_relative_change,
+        status="aprovado" if approved else ("override" if overridden else "reprovado"),
+        reason=args.volume_change_reason.strip() if overridden else None,
+    )
+    if not approved and not overridden:
+        # exit != 0 -> o workflow não chega no passo de commit/push.
+        sys.exit(1)
 
     print("\n\nPipeline completo executado com sucesso.")
 
