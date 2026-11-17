@@ -1,7 +1,7 @@
 {
   "pipeline_name": "gold_fct_incidencia_tb",
-  "started_at": "2026-11-17T20:02:36.811871+00:00",
-  "completed_at": "2026-11-17T20:02:43.380295+00:00",
+  "started_at": "2026-11-17T20:35:43.863938+00:00",
+  "completed_at": "2026-11-17T20:35:45.612664+00:00",
   "steps": [
     {
       "step": "load_silver",

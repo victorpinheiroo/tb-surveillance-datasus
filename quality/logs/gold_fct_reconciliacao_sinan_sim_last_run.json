@@ -1,7 +1,7 @@
 {
   "pipeline_name": "gold_fct_reconciliacao_sinan_sim",
-  "started_at": "2026-11-17T20:02:58.520520+00:00",
-  "completed_at": "2026-11-17T20:03:05.237909+00:00",
+  "started_at": "2026-11-17T20:35:50.427429+00:00",
+  "completed_at": "2026-11-17T20:35:52.310895+00:00",
   "steps": [
     {
       "step": "load_silver",

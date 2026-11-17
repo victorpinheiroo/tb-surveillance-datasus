@@ -1,16 +1,7 @@
 {
-  "decided_at": "2026-11-17T20:03:05.708018+00:00",
-  "status": "override",
+  "decided_at": "2026-11-17T20:35:52.482062+00:00",
+  "status": "aprovado",
   "max_relative_change": 0.25,
-  "violations": [
-    "bronze_to_silver_sim_last_run.json :: load_bronze.rows_after: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "bronze_to_silver_sim_last_run.json :: normalize_municipio_code.rows_before: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "bronze_to_silver_sim_last_run.json :: normalize_municipio_code.rows_after: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "bronze_to_silver_sim_last_run.json :: cast_dates.rows_before: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "bronze_to_silver_sim_last_run.json :: cast_dates.rows_after: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "bronze_to_silver_sim_last_run.json :: diagnostic_duplicate_check.rows_before: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "bronze_to_silver_sim_last_run.json :: diagnostic_duplicate_check.rows_after: 40,205 -> 50,705 (+26.1%, limite ±25%)",
-    "gold_fct_reconciliacao_sinan_sim_last_run.json :: aggregate_sim_obitos.rows_before: 40,205 -> 50,705 (+26.1%, limite ±25%)"
-  ],
-  "override_reason": "19 SIM state x year partitions documented as coverage gaps (ADR-001) were published at the source; all 251 existing partitions are unchanged (0 delta per partition); the new partitions pass the catalog, residence and duplicate guards; 2015 total now equals the national file (4,610). See issue #1."
+  "violations": [],
+  "override_reason": null
 }
