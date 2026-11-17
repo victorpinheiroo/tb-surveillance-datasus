@@ -57,6 +57,7 @@ Cinco ADRs documentam decisões com contexto, alternativas consideradas e trade-
 O que diferencia este projeto de um dashboard de tutorial:
 
 - **Bug de metadado no catálogo remoto do PySUS**: `TUBEBR16.parquet` existia mas retornava vazio — causa raiz identificada (`group_id` nulo excluindo o arquivo de queries filtradas), documentado em [`docs/known-issues.md`](docs/known-issues.md).
+- **Um incidente de produção, pego tarde e corrigido na raiz**: em out/2026 a execução mensal, sem versões fixadas, instalou o PySUS 2.11.x, cujo catálogo devolve o arquivo *nacional* do SIM em toda consulta por UF (`state` nulo passa no filtro). O SIM inflou ~35x e o commit automático publicou isso no dashboard. O log de qualidade tinha registrado 100% de duplicidade, mas nada comparava uma execução com a anterior. Corrigido com dependências fixadas, guardas de catálogo e de conteúdo, e um quality gate de volume entre execuções que bloqueia o commit automático. Ver [`docs/known-issues.md`](docs/known-issues.md#incident-2026-10-pysus-211x-made-every-states-sim-file-include-the-whole-country-35x-inflation-published-to-the-dashboard).
 - **Três fontes, três convenções diferentes para "valor ausente"**: SINAN-TB usa `"0"`, IBGE/SIDRA usa `"..."`, SIM usa `UF+0000` — mesma ideia semântica, sintaxes incompatíveis, cada uma identificada e tratada explicitamente.
 - **Hipótese testada e parcialmente refutada, documentada como tal**: uma tentativa de explicar 4 casos anômalos na reconciliação SINAN×SIM por atraso de maturidade do SIM não se sustentou nos dados — reportado como está, não forçado para caber numa narrativa limpa.
 - **Dicionário de dados oficial (`SITUA_ENCE`) confirmado por leitura direta de PDF do Ministério da Saúde**, depois de duas fontes secundárias divergirem entre si sobre a ordem correta das categorias.
@@ -87,6 +88,7 @@ docs/adrs/                    # Architecture Decision Records
 docs/known-issues.md          # achados de qualidade de dado
 docs/schema-reference-*.md    # schema real documentado por fonte
 quality/logs/             # log estruturado de cada execução
+tests/                    # testes unitários das guardas de qualidade (pytest)
 infra/                    # IaC Azure (demonstração pontual)
 ```
 
@@ -96,8 +98,8 @@ infra/                    # IaC Azure (demonstração pontual)
 - 7% das combinações UF×ano do SIM não têm dado disponível na fonte (não preenchido por fonte alternativa — ver ADR-001).
 - Taxa de abandono em nível de município é estatisticamente instável para ~90% dos municípios (amostra pequena); visão de UF é a recomendada.
 - 4 casos residuais na reconciliação SINAN×SIM permanecem sem explicação completa.
-- `requirements.txt` não fixa versões exatas (só `pysus>=2.0`) — uma lacuna de reprodutibilidade. Se uma versão futura do PySUS mudar o comportamento do metadado do catálogo (como já aconteceu uma vez, ver `docs/known-issues.md`), o pipeline pode funcionar hoje e quebrar silenciosamente pra quem clonar o repo depois. Ainda não fixado; vale fazer via `pip freeze` contra o ambiente validado.
-- Não há suite de testes automatizados (ex.: `pytest`). Os logs de qualidade validam o *dado* a cada execução, mas a lógica central — decodificação de `SITUA_ENCE`, regex do sentinela `XX0000`, parser de data — não tem teste unitário. Uma lacuna real pra um projeto de nível sênior, deixada honesta aqui em vez de implícita como coberta.
+- As dependências agora estão fixadas no ambiente validado (`pysus==2.7.0`). Esta limitação estava listada aqui como "ainda não fixado" e acabou causando o incidente de out/2026 antes de ser corrigida (ver `docs/known-issues.md`). Atualizar o PySUS passa a ser uma mudança deliberada e revalidada.
+- A cobertura de testes é mínima: `tests/` cobre só as guardas criadas após o incidente de out/2026 (catálogo, residência, teto de duplicidade, gate de volume entre execuções), usando o dado contaminado real como fixture, e roda no CI antes de cada execução do pipeline. A lógica central de transformação — decodificação de `SITUA_ENCE`, regex do sentinela `XX0000`, parser de data — ainda não tem teste unitário.
 
 ---
 

@@ -48,6 +48,60 @@ ALL_UFS = [
     "SP", "SE", "TO",
 ]
 
+# Prefixo IBGE (2 dígitos) de cada UF — usado na checagem de sanidade de
+# residência (ver `assert_rows_belong_to_state`).
+UF_IBGE_PREFIX = {
+    "RO": "11", "AC": "12", "AM": "13", "RR": "14", "PA": "15", "AP": "16",
+    "TO": "17", "MA": "21", "PI": "22", "CE": "23", "RN": "24", "PB": "25",
+    "PE": "26", "AL": "27", "SE": "28", "BA": "29", "MG": "31", "ES": "32",
+    "RJ": "33", "SP": "35", "PR": "41", "SC": "42", "RS": "43", "MS": "50",
+    "MT": "51", "GO": "52", "DF": "53",
+}
+
+# Os arquivos estaduais do SIM (DOxxAAAA) são por UF de RESIDÊNCIA: nos 251
+# arquivos do bronze validado (commit cdfcd29), 100% das linhas têm
+# CODMUNRES com o prefixo da própria UF — inclusive o sentinela XX0000, que
+# carrega o prefixo da UF. Limiar de 99% deixa margem mínima sem aceitar
+# contaminação real (o incidente de 2026-10 tinha ~0,3% de linhas da UF).
+MIN_IN_STATE_RESIDENCE_SHARE = 0.99
+
+
+def catalog_files_for(state: str, year: int):
+    """Arquivos do catálogo SIM para (UF, ano) — rejeitando qualquer arquivo
+    que não seja da UF pedida.
+
+    Incidente 2026-10 (ver docs/known-issues.md): a partir do PySUS 2.11.x, o
+    catálogo passou a incluir a origem `dadosgov`, cujo arquivo nacional
+    (`Mortalidade_Geral_AAAA.parquet`) tem `state=None` — e estado nulo PASSA
+    no filtro `list_files(state=...)`. Resultado: cada UF trazia o Brasil
+    inteiro junto, e o SIM ficou ~35x maior sem nenhum erro. Mesmo padrão de
+    raiz do TUBEBR16 (metadado nulo no catálogo), sentido oposto.
+    """
+    matches = list_files("SIM", state=state, year=year)
+    states = set(matches["state"]) if len(matches) else set()
+    if states - {state}:
+        raise RuntimeError(
+            f"Catálogo SIM para {state}/{year} devolveu arquivo(s) de outra UF ou "
+            f"sem UF (state={sorted(map(str, states - {state}))}): "
+            f"{list(matches['name'])}. Provável mudança de versão/origem do "
+            f"PySUS — investigar antes de ingerir (ver docs/known-issues.md)."
+        )
+    return matches
+
+
+def assert_rows_belong_to_state(df: pd.DataFrame, state: str, year: int):
+    """Checagem de conteúdo, independente do catálogo: o arquivo da UF tem que
+    conter óbitos de residentes daquela UF."""
+    if "CODMUNRES" not in df.columns or df.empty:
+        return
+    share = (df["CODMUNRES"].astype(str).str[:2] == UF_IBGE_PREFIX[state]).mean()
+    if share < MIN_IN_STATE_RESIDENCE_SHARE:
+        raise RuntimeError(
+            f"SIM {state}/{year}: só {share:.1%} das {len(df):,} linhas têm residência "
+            f"em {state} (mínimo {MIN_IN_STATE_RESIDENCE_SHARE:.0%}). O arquivo não é "
+            f"o arquivo estadual esperado — abortando para não gravar bronze contaminado."
+        )
+
 
 def checksum_dataframe(df) -> str:
     return hashlib.sha256(df.to_csv(index=False).encode("utf-8")).hexdigest()[:16]
@@ -83,7 +137,7 @@ def build_coverage_report(states: list[str], years: list[int]) -> pd.DataFrame:
     for state in states:
         row = {"state": state}
         for year in years:
-            matches = list_files("SIM", state=state, year=year)
+            matches = catalog_files_for(state, year)
             row[year] = bool(len(matches))
         rows.append(row)
 
@@ -121,6 +175,8 @@ def extract_state_year(state: str, year: int) -> Path | None:
             f"antes da extração em escala e trate esse UF/ano explicitamente — não "
             f"deixe passar como extração silenciosamente vazia."
         )
+
+    assert_rows_belong_to_state(df, state, year)
 
     causa_col = next((c for c in CAUSA_COL_CANDIDATES if c in df.columns), None)
     if causa_col is None:

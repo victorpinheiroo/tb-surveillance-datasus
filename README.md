@@ -55,6 +55,7 @@ Five ADRs document context, alternatives considered, and trade-offs for each dec
 ## Data quality findings
 
 - **Metadata bug in PySUS's remote catalog**: `TUBEBR16.parquet` existed but returned empty — root cause identified (a null `group_id` silently excluding the file from filtered queries), documented in [`docs/known-issues.md`](docs/known-issues.md).
+- **A production incident, caught late and fixed at the root**: in Oct/2026 the unpinned monthly run picked up PySUS 2.11.x, whose catalog returns the *national* SIM file for every state query (null `state` passes the filter). SIM inflated ~35x and the auto-commit published it to the dashboard. The quality log had recorded 100% duplication — but nothing read it across runs. Fixed with pinned dependencies, catalog/content guards, and a cross-run volume gate that blocks the auto-commit — see [`docs/known-issues.md`](docs/known-issues.md#incident-2026-10-pysus-211x-made-every-states-sim-file-include-the-whole-country-35x-inflation-published-to-the-dashboard).
 - **Three sources, three different conventions for "missing value"**: SINAN-TB uses `"0"`, IBGE/SIDRA uses `"..."`, SIM uses `UF+0000` — same semantic idea, incompatible syntax, each identified and handled explicitly.
 - **A hypothesis tested and partially refuted, reported as such**: an attempt to explain 4 anomalous cases in the SINAN×SIM reconciliation by SIM maturity lag did not hold up against the data — reported as-is, not forced to fit a clean narrative.
 - **Official data dictionary (`SITUA_ENCE`) confirmed by direct reading of a Ministry of Health PDF**, after two secondary sources disagreed with each other on the correct category ordering.
@@ -85,6 +86,7 @@ docs/adrs/                    # Architecture Decision Records
 docs/known-issues.md          # data quality findings
 docs/schema-reference-*.md    # real schema documented per source
 quality/logs/             # structured log per execution
+tests/                    # unit tests for the quality guards (pytest)
 infra/                    # Azure IaC (one-time demonstration)
 ```
 
@@ -94,8 +96,8 @@ infra/                    # Azure IaC (one-time demonstration)
 - 7% of SIM state×year combinations have no data available from the source (not backfilled from an alternative source — see ADR-001).
 - Municipality-level abandonment rate is statistically unstable for ~90% of municipalities (small sample); state-level is the recommended view.
 - 4 residual cases in the SINAN×SIM reconciliation remain without a complete explanation.
-- `requirements.txt` pins no exact versions (only `pysus>=2.0`) — a reproducibility gap. If a future PySUS release changes catalog metadata behavior (as already happened once, see `docs/known-issues.md`), the pipeline could work today and break silently for anyone cloning the repo later. Not pinned yet; worth doing via `pip freeze` against the validated environment.
-- No automated test suite (e.g. `pytest`). Quality logs validate the *data* on every run, but core logic — `SITUA_ENCE` decoding, the `XX0000` sentinel regex, date parsing — has no unit tests. A real gap for a senior-level project, left honest here rather than implied as covered.
+- Dependencies are now pinned to the validated environment (`pysus==2.7.0`). This limitation was listed here as "not pinned yet" — and then caused the Oct/2026 incident before it was fixed (see `docs/known-issues.md`). Upgrading PySUS is a deliberate, re-validated change.
+- Test coverage is minimal: `tests/` covers only the guards added after the Oct/2026 incident (catalog, residence, duplicate ceiling, cross-run volume gate), using real contaminated data as fixtures, and runs in CI before every pipeline run. Core transformation logic — `SITUA_ENCE` decoding, the `XX0000` sentinel regex, date parsing — still has no unit tests.
 
 ---
 

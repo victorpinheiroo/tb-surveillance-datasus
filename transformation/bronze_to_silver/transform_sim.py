@@ -133,7 +133,24 @@ def diagnostic_duplicate_check(df: pd.DataFrame, log: QualityLog) -> pd.DataFram
         "colisao_quase_identificador_municipio_data_causa": int(dupes_quasi) if dupes_quasi is not None else "n/a",
         "nota": "diagnóstico apenas — nenhuma linha removida por duplicidade não confirmada",
     })
+
+    # O diagnóstico continua não removendo linhas (ADR-002), mas deixa de ser
+    # só informativo acima de um teto. Baseline validado (cdfcd29): 2.197 de
+    # 40.205 = 5,5%. No incidente de 2026-10 este mesmo campo marcou 100% de
+    # duplicidade e o pipeline seguiu, porque nada lia o número. Teto de 20%
+    # = ~4x o baseline.
+    if dupes_contador is not None and before:
+        share = dupes_contador / before
+        if share > MAX_CONTADOR_DUPLICATE_SHARE:
+            raise RuntimeError(
+                f"{share:.1%} das linhas do SIM têm CONTADOR duplicado entre arquivos "
+                f"(teto {MAX_CONTADOR_DUPLICATE_SHARE:.0%}, baseline ~5,5%). Indica o mesmo "
+                f"óbito ingerido em várias UFs — ver docs/known-issues.md. Silver não gravado."
+            )
     return df
+
+
+MAX_CONTADOR_DUPLICATE_SHARE = 0.20
 
 
 def write_silver(df: pd.DataFrame, years, ufs):

@@ -214,3 +214,104 @@ reasoning already applied to the other residual anomalies in this document.
 by default. Restricting the metric to new cases only would be a scope change
 to what the metric measures (a product decision), not a bug fix — kept as an
 observation here, not treated as a required correction.
+
+## Incident 2026-10: PySUS 2.11.x made every state's SIM file include the whole country (~35x inflation, published to the dashboard)
+
+**Status:** fixed — data restored to the last validated state (`cdfcd29`),
+dependencies pinned, three new guards added. Detected externally, not by the
+pipeline.
+
+### Symptom
+
+The scheduled runs of 2026-10-01 and 2026-11-01 completed successfully and
+auto-committed a SIM silver of **1,419,740** TB deaths (vs. **40,205** in the
+validated run of 2026-08-08). The dashboard's hero stat became "+3641% more TB
+deaths in SIM than SINAN", and all 270 state×year combinations showed as
+covered (the documented gap is 19).
+
+### Root cause
+
+`requirements.txt` had `pysus>=2.0`. The August run used the locally
+validated PySUS 2.7.0; the October run installed 2.11.4 (November: 2.11.7).
+From 2.11.x on, PySUS's catalog has a second origin, `dadosgov`, whose
+national file `Mortalidade_Geral_YYYY.parquet` carries `state=None` — and a
+null `state` **passes** the `list_files("SIM", state=...)` filter.
+Reproduced side by side in clean venvs:
+
+| PySUS | `list_files("SIM", state="AC", year=2015)` |
+|---|---|
+| 2.7.0 | `DOAC2015.parquet` |
+| 2.11.7 | `DOAC2015.parquet` + `dadosgov/.../BR/Mortalidade_Geral_2015.parquet` |
+
+So each `sim(state=UF)` returned *that state + all of Brazil*. Bronze
+metadata shows it directly: `uf=AC/ano=2015` went from
+`rows_total_source=3517` to `1267692` (= 1,264,175 national deaths in 2015 +
+AC). The ICD-10 A15–A19 filter kept working — the TB filter was never the
+problem; the national TB deaths (~4.6k/year) were simply counted once per
+state, 27 times. States with no state file (the 19 gaps) "gained" data
+because the national file matched for them too.
+
+Same root pattern as `TUBEBR16` above (null catalog metadata interacting
+with a filter), in the opposite direction: there a null excluded a real
+file; here a null included a foreign one.
+
+### Why the existing quality checks did not stop it
+
+The signal was logged. `bronze_to_silver_sim_last_run.json` recorded
+`contador_duplicado_entre_arquivos: 1419740` — 100% of rows — but that step
+was diagnostic-only by design (ADR-002), and every quality log compared the
+run only to itself. Nothing compared a run against the previous one, and a
+green run auto-commits.
+
+### Fix
+
+1. **Pinned dependencies** (`requirements.txt`) to the validated environment
+   (`pysus==2.7.0`, pandas, pyarrow, numpy, sidrapy). Upgrading PySUS is now
+   a deliberate change, not something the monthly runner does on its own.
+2. **Catalog guard** (`catalog_files_for` in
+   `ingestion/extract_sim_tb_deaths.py`): fails if the catalog returns any
+   file whose `state` is not the requested state (including `None`).
+   Verified: passes under 2.7.0, blocks under 2.11.7 before any download.
+3. **Content guard** (`assert_rows_belong_to_state`): SIM state files are by
+   residence — in all 251 validated files, 100% of `CODMUNRES` carry the
+   state's IBGE prefix. Fails below 99%. The contaminated AC/2015 file had
+   0.8%; SP/2015, 31.8%.
+4. **Duplicate ceiling** in `transform_sim.py`: the diagnostic still removes
+   nothing, but fails above 20% `CONTADOR` duplication (baseline 5.5%).
+5. **Cross-run volume gate** (`pipeline/volume_gate.py`, called by
+   `run_pipeline.py`): snapshots every `*_last_run.json` before the run and
+   fails if any step's row count moves more than ±25% versus the previous
+   run (normal monthly consolidation is ~1%). A failed gate exits non-zero,
+   so the workflow never reaches the auto-commit. Intentional changes go
+   through `--accept-volume-change`. Replayed against history: `cdfcd29 ->
+   f48a95b` is rejected (8 counts, +3431%); `71304ab -> f48a95b` passes.
+   It compares each step's *total* count, not partition by partition, and
+   ignores counts that were zero before — so a newly published state×year
+   partition (a few % of the total) passes instead of looking like an
+   infinite change.
+6. **Failures are no longer silent**: a blocked commit protects the
+   dashboard, but a pipeline stuck for months unnoticed is its own failure.
+   Any failed run (tests, gates, timeout) opens a `pipeline-failure` issue,
+   or comments on the open one.
+7. **Unit tests** (`tests/`, run in the workflow before the pipeline): one
+   per guard, using slices of the *real* contaminated and validated AC/SP
+   2015 files and the real quality logs of both commits as fixtures.
+
+### Which defense is primary
+
+Pinning PySUS fixes the *library*, not the *source catalog*: the remote
+catalog and FTP mirror keep changing under a pinned version (see the
+`DOSP2021` observation below). The content checks — catalog files must
+belong to the requested state, rows must be residents of that state — are
+the primary defense because they test the data itself, whatever produced
+it. The pin is secondary: it removes one known way for the data to change,
+not all of them.
+
+### Side observation (not yet acted on)
+
+Under the pinned 2.7.0, the catalog now also lists `DOSP2021.parquet`,
+which was absent in August — the FTP mirror itself appears to have filled
+some of the 19 documented gaps. The next legitimate run may therefore
+increase SIM coverage; that change is real, should stay well under the 25%
+gate, and should be re-validated (and the "19 gaps" figure in ADR-001 /
+README updated) when it happens.

@@ -21,6 +21,7 @@ on:
 # repositório público independente da duração.
 permissions:
   contents: write  # necessário para o commit automático dos parquets atualizados
+  issues: write    # abrir/comentar issue quando o pipeline falha (ver último passo)
 
 jobs:
   run-pipeline:
@@ -39,6 +40,9 @@ jobs:
       - name: Instalar dependências
         run: pip install -r requirements.txt
 
+      - name: Testes das guardas de qualidade
+        run: python -m pytest -q tests
+
       - name: Rodar pipeline completo (bronze -> silver -> gold)
         env:
           PYTHONUNBUFFERED: "1"
@@ -52,3 +56,23 @@ jobs:
           git diff --staged --quiet && echo "Nenhuma mudança de dado — nada a commitar." && exit 0
           git commit -m "Automated pipeline run: $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
+
+      # Incidente 2026-10: um gate que bloqueia o commit protege o dashboard,
+      # mas falha silenciosa deixaria o pipeline parado por meses sem ninguém
+      # notar. Toda falha (testes, gate de volume, guardas, timeout) abre uma
+      # issue — ou comenta na que já estiver aberta, para não duplicar.
+      - name: Abrir issue em caso de falha
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          BODY="A execução $RUN_URL (gatilho: $EVENT) falhou — nada foi commitado, o dashboard segue com o último dado aprovado. Ver o log; se a causa for o volume_gate, procure por '[volume_gate] REPROVADO'."
+          EXISTING=$(gh issue list --state open --label pipeline-failure --json number -q '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh label create pipeline-failure --color d73a4a --description "Falha do pipeline agendado" --force
+            gh issue create --title "Pipeline falhou ($(date -u +'%Y-%m-%d'))" --label pipeline-failure --body "$BODY"
+          fi

@@ -1,4 +1,6 @@
-pysus>=2.0
-pandas
-pyarrow
-sidrapy
+pysus==2.7.0
+pandas==2.3.3
+pyarrow==25.0.1
+numpy==2.4.1
+sidrapy==0.1.4
+pytest==9.1.1

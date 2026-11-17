@@ -23,6 +23,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import volume_gate
+
 YEARS = [str(y) for y in range(2015, 2025)]  # fixo — ver docstring acima
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -88,7 +90,17 @@ def run_stage(steps, stage_name: str) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Orquestrador do pipeline TB-DATASUS")
     parser.add_argument("--stage", choices=["bronze", "silver", "gold", "all"], default="all")
+    parser.add_argument(
+        "--accept-volume-change", action="store_true",
+        help="Não reprovar pelo volume_gate (mudança de volume intencional e documentada).",
+    )
+    parser.add_argument(
+        "--max-relative-change", type=float, default=volume_gate.DEFAULT_MAX_RELATIVE_CHANGE,
+    )
     args = parser.parse_args()
+
+    # Snapshot ANTES de rodar: os scripts sobrescrevem os *_last_run.json.
+    previous_logs = volume_gate.snapshot(REPO_ROOT)
 
     stages = {
         "bronze": [(BRONZE_STEPS, "bronze")],
@@ -100,6 +112,16 @@ def main():
     for steps, name in stages:
         if not run_stage(steps, name):
             print(f"\nPipeline abortado no estágio '{name}'.")
+            sys.exit(1)
+
+    violations = volume_gate.compare(
+        previous_logs, volume_gate.snapshot(REPO_ROOT), args.max_relative_change,
+    )
+    if not volume_gate.report(violations, args.max_relative_change):
+        if args.accept_volume_change:
+            print("    --accept-volume-change informado: seguindo mesmo assim.")
+        else:
+            # exit != 0 -> o workflow não chega no passo de commit/push.
             sys.exit(1)
 
     print("\n\nPipeline completo executado com sucesso.")
