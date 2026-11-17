@@ -1,5 +1,5 @@
 source=PySUS sinan(disease='tube', year=2018)
-ingested_at=2026-11-01T12:13:26.703362+00:00
+ingested_at=2026-08-08T20:36:36.673094+00:00
 rows=94735
 columns=100
-checksum_sha256_16=fda23f2e9f97f936
+checksum_sha256_16=6a097ff3db1800a0
