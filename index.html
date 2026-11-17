@@ -337,12 +337,16 @@
         <p>SINAN-TB uses <code>"0"</code>, IBGE/SIDRA uses <code>"..."</code>, SIM uses the <code>UF+0000</code> pattern — same semantic idea ("not identified"), three different conventions, each identified and handled explicitly.</p>
       </div>
       <div class="quality-card">
-        <h3>Irregular SIM coverage</h3>
-        <p>19 of 270 state×year combinations (7%) have no published file, spread across 8 states with no single pattern — treated as a declared limitation (<code>status_cobertura_sim</code>), not backfilled from an alternative source.</p>
+        <h3>SIM coverage: gaps filled at the source</h3>
+        <p>Until Nov/2026, 19 of 270 state×year combinations (7%) had no published SIM file — SP, RJ and PE were missing 4 years each. They were never backfilled from another source. The source has since published all 19, and the 251 existing partitions were verified unchanged. The headline above went from +38% (251 combinations) to +34% (all 270): a coverage effect, not a new finding.</p>
       </div>
       <div class="quality-card">
         <h3>A hypothesis tested and partially refuted</h3>
-        <p>4 cases where SINAN &gt; SIM in the reconciliation aren't explained by SIM consolidation lag, as expected — reported as an unresolved residual anomaly, not forced to fit the narrative.</p>
+        <p>4 cases where SINAN &gt; SIM in the reconciliation aren't explained by SIM consolidation lag, as expected — reported as an unresolved residual anomaly, not forced to fit the narrative. A 5th (RR/2021, 18 vs 17) appeared in Nov/2026 as SINAN consolidated one more death.</p>
+      </div>
+      <div class="quality-card">
+        <h3>A production incident, and the gate it produced</h3>
+        <p>In Oct/2026 an unpinned PySUS upgrade made every state query return the national SIM file too (a null <code>state</code> passed the filter). SIM inflated ~35x and the monthly run published it. Fixed at the root: pinned dependencies, catalog and residence guards, and a cross-run volume gate that blocks the auto-commit — documented in <code>docs/known-issues.md</code>.</p>
       </div>
     </div>
   </section>

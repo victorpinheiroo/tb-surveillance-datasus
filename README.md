@@ -39,14 +39,14 @@ Orchestrated via GitHub Actions (monthly + manual trigger), 100% free infrastruc
 | Source | Content | Window | Access |
 |---|---|---|---|
 | SINAN-TB | Tuberculosis case notifications | 2015–2024 | PySUS |
-| SIM | Deaths (filtered to ICD-10 A15-A19) | 2015–2024, 251/270 state×year combinations | PySUS |
+| SIM | Deaths (filtered to ICD-10 A15-A19) | 2015–2024, 270/270 state×year combinations (251 until Nov/2026 — see ADR-001) | PySUS |
 | IBGE/SIDRA | Resident population by municipality | 2015–2024 | SIDRA API |
 
 ## Engineering decisions
 
 Five ADRs document context, alternatives considered, and trade-offs for each decision:
 
-- **[ADR-001](docs/adrs/ADR-001-scope-source-infrastructure.md)** — source selection, right-censoring empirically validated (2024 data still consolidating), irregular SIM coverage (7% gaps, no single pattern), SCD2 kept by design even without observed need in the current window.
+- **[ADR-001](docs/adrs/ADR-001-scope-source-infrastructure.md)** — source selection, right-censoring empirically validated (2024 data still consolidating), irregular SIM coverage (7% gaps with no single pattern, filled at the source in Nov/2026), SCD2 kept by design even without observed need in the current window.
 - **[ADR-002](docs/adrs/ADR-002-case-identity-deduplication.md)** — SINAN-TB has no unique case identifier; deliberate decision not to build a synthetic key (a quasi-identifier collision approach was tested and rejected for producing false positives in large municipalities).
 - **[ADR-003](docs/adrs/ADR-003-population-source-ibge.md)** — 2022/2023 had no population estimate table available; the solution replicates the logic IBGE itself used publicly (2022 Census as proxy), not an invented interpolation.
 - **[ADR-004](docs/adrs/ADR-004-orchestration.md)** — orchestration uses a fixed year window (does not auto-extend), because every new year investigated in this project surfaced a quirk that only human investigation caught.
@@ -55,6 +55,7 @@ Five ADRs document context, alternatives considered, and trade-offs for each dec
 ## Data quality findings
 
 - **Metadata bug in PySUS's remote catalog**: `TUBEBR16.parquet` existed but returned empty — root cause identified (a null `group_id` silently excluding the file from filtered queries), documented in [`docs/known-issues.md`](docs/known-issues.md).
+- **The headline went from +38% to +34% — and that is a coverage effect, not a bug**: until Nov/2026 the SINAN×SIM comparison covered 251 of 270 state×year combinations, missing large states (SP, RJ and PE had 4 years each without a SIM file). The source has since published all 19; the 251 existing partitions were verified unchanged, so the comparison now covers the whole country. The label describes a difference between two sources, not a direct claim that all of it is underreporting.
 - **A production incident, caught late and fixed at the root**: in Oct/2026 the unpinned monthly run picked up PySUS 2.11.x, whose catalog returns the *national* SIM file for every state query (null `state` passes the filter). SIM inflated ~35x and the auto-commit published it to the dashboard. The quality log had recorded 100% duplication — but nothing read it across runs. Fixed with pinned dependencies, catalog/content guards, and a cross-run volume gate that blocks the auto-commit — see [`docs/known-issues.md`](docs/known-issues.md#incident-2026-10-pysus-211x-made-every-states-sim-file-include-the-whole-country-35x-inflation-published-to-the-dashboard).
 - **Three sources, three different conventions for "missing value"**: SINAN-TB uses `"0"`, IBGE/SIDRA uses `"..."`, SIM uses `UF+0000` — same semantic idea, incompatible syntax, each identified and handled explicitly.
 - **A hypothesis tested and partially refuted, reported as such**: an attempt to explain 4 anomalous cases in the SINAN×SIM reconciliation by SIM maturity lag did not hold up against the data — reported as-is, not forced to fit a clean narrative.
@@ -93,9 +94,9 @@ infra/                    # Azure IaC (one-time demonstration)
 ## Known limitations
 
 - Case identity is per notification event, not per unique patient (see ADR-002).
-- 7% of SIM state×year combinations have no data available from the source (not backfilled from an alternative source — see ADR-001).
+- SIM coverage became complete (270/270) only in Nov/2026, when the source published the 19 state×year files that had been missing. The pipeline never backfilled them from another source; if a future year has gaps again, they will show up as `status_cobertura_sim = 'ausente'` (see ADR-001).
 - Municipality-level abandonment rate is statistically unstable for ~90% of municipalities (small sample); state-level is the recommended view.
-- 4 residual cases in the SINAN×SIM reconciliation remain without a complete explanation.
+- 5 residual cases where SINAN > SIM in the reconciliation remain without a complete explanation (4 since Aug/2026; RR/2021 joined in Nov/2026 after SINAN consolidated one more death).
 - Dependencies are now pinned to the validated environment (`pysus==2.7.0`). This limitation was listed here as "not pinned yet" — and then caused the Oct/2026 incident before it was fixed (see `docs/known-issues.md`). Upgrading PySUS is a deliberate, re-validated change.
 - Test coverage is minimal: `tests/` covers only the guards added after the Oct/2026 incident (catalog, residence, duplicate ceiling, cross-run volume gate), using real contaminated data as fixtures, and runs in CI before every pipeline run. Core transformation logic — `SITUA_ENCE` decoding, the `XX0000` sentinel regex, date parsing — still has no unit tests.
 

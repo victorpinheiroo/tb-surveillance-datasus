@@ -283,7 +283,11 @@ green run auto-commits.
    fails if any step's row count moves more than ±25% versus the previous
    run (normal monthly consolidation is ~1%). A failed gate exits non-zero,
    so the workflow never reaches the auto-commit. Intentional changes go
-   through `--accept-volume-change`. Replayed against history: `cdfcd29 ->
+   through `--accept-volume-change`, which (a) requires a written reason,
+   recorded in `quality/logs/volume_gate_decision.json` and in the commit
+   message; (b) disables only the volume gate — the catalog, residence and
+   duplicate guards have no override; (c) is off by default and exists only
+   on the manual `workflow_dispatch` trigger, never on scheduled runs. Replayed against history: `cdfcd29 ->
    f48a95b` is rejected (8 counts, +3431%); `71304ab -> f48a95b` passes.
    It compares each step's *total* count, not partition by partition, and
    ignores counts that were zero before — so a newly published state×year
@@ -307,11 +311,29 @@ the primary defense because they test the data itself, whatever produced
 it. The pin is secondary: it removes one known way for the data to change,
 not all of them.
 
-### Side observation (not yet acted on)
+### Follow-up: the 19 coverage gaps were filled at the source (2026-11-17)
 
-Under the pinned 2.7.0, the catalog now also lists `DOSP2021.parquet`,
-which was absent in August — the FTP mirror itself appears to have filled
-some of the 19 documented gaps. The next legitimate run may therefore
-increase SIM coverage; that change is real, should stay well under the 25%
-gate, and should be re-validated (and the "19 gaps" figure in ADR-001 /
-README updated) when it happens.
+Under the pinned 2.7.0, the catalog started listing `DOSP2021.parquet`,
+absent in August. The first guarded run (manual, 2026-11-17) showed that all
+19 documented gaps had been published. That run **failed** on the volume
+gate (SIM 40,205 -> 50,705, +26.1% vs. a ±25% limit), opened issue #1, and
+committed nothing — exactly the intended behavior. An earlier note here
+predicted the change "should stay well under the 25% gate"; that held for
+one partition, not for 19 at once.
+
+Verified partition by partition before accepting:
+- the 251 existing partitions are identical in content to `cdfcd29`;
+- the +10,500 rows come only from the 19 new partitions, which pass the
+  catalog, residence and duplicate guards;
+- the 2015 total (4,610) equals the TB deaths in the national SIM file.
+
+Accepted via `--accept-volume-change` with a written reason, recorded in
+`quality/logs/volume_gate_decision.json` and the commit message. The
+dashboard headline moved from +38% (251 combinations, both sides filtered
+to covered combinations) to +34% (all 270). Data, headline and docs were
+published in a single commit so no published version contradicts itself.
+
+Possible next improvement (not done): make the gate partition-aware —
+existing partitions must stay essentially unchanged, new partitions pass if
+they clear the state/residence guards. Gaps filled at the source would then
+pass on their own, while changes to existing data stay blocked.

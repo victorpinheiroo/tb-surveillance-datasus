@@ -11,8 +11,9 @@ field names.
 **Why SP/2022:** highest volume available among the 251 files in the SIM
 bronze layer (confirmed by file size before choosing — SP/2022 is the
 largest; SP/2023, which would be the most recent year/state, is one of the
-19 coverage gaps already documented in ADR-001, so it doesn't exist in
-bronze).
+19 coverage gaps already documented in ADR-001, so it didn't exist in
+bronze at the time — the gaps were filled at the source in Nov/2026, see
+ADR-001 Revision History).
 **Rows:** 1,283
 **Total columns:** 90 (87 from the original source schema + 3 provenance
 columns added by the ingestion script)

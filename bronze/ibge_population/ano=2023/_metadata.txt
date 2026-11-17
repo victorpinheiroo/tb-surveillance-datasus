@@ -1,5 +1,5 @@
 source=IBGE-SIDRA-4714-censo2022-proxy-para-2023
 status_fonte_populacao=proxy_censo_2022
-ingested_at=2026-08-08T21:07:32.095547+00:00
+ingested_at=2026-11-17T20:01:34.056163+00:00
 rows=5571
-checksum_sha256_16=38d7b42eadc6d7e1
+checksum_sha256_16=23972c428ff1e0bd
